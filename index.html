@@ -8,43 +8,169 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png" />
   <style>
-    body { margin:0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:#f3f4f6; color:#111827; }
-    header { background:#111827; color:white; padding:12px 16px; }
-    header h1 { margin:0; font-size:20px; }
-    .container { max-width:1100px; margin:0 auto; padding:12px 12px 40px; }
-    .grid { display:flex; flex-wrap:wrap; gap:12px; }
-    .card { background:white; border-radius:10px; padding:12px; box-shadow:0 1px 3px rgba(15,23,42,0.15); flex:1 1 320px; }
-    h2 { font-size:16px; margin:0 0 8px; }
-    label { display:block; font-size:12px; margin-top:6px; color:#4b5563; }
-    input, select, textarea { width:100%; padding:6px 8px; margin-top:2px; border-radius:6px; border:1px solid #d1d5db; font-size:13px; box-sizing:border-box; }
-    textarea { min-height:60px; resize:vertical; }
-    button { border:none; border-radius:999px; padding:8px 14px; font-size:13px; cursor:pointer; margin-top:8px; }
-    .btn-primary { background:#111827; color:white; }
-    .btn-secondary { background:#e5e7eb; color:#111827; }
-    .btn-danger { background:#b91c1c; color:white; }
-    .row { display:flex; gap:8px; flex-wrap:wrap; }
-    .col-2 { flex:1 1 calc(50% - 4px); min-width:140px; }
-    .col-3 { flex:1 1 calc(33.3% - 6px); min-width:110px; }
-    table { width:100%; border-collapse:collapse; font-size:12px; margin-top:6px; }
-    th, td { padding:6px 4px; border-bottom:1px solid #e5e7eb; text-align:left; }
-    th { font-size:11px; text-transform:uppercase; color:#6b7280; }
-    .badge { display:inline-block; border-radius:999px; padding:2px 8px; font-size:11px; }
-    .filter-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:4px; }
-    .filter-row input, .filter-row select { max-width:180px; }
-    .pill { font-size:11px; padding:4px 10px; border-radius:999px; background:#eef2ff; color:#3730a3; display:inline-block; margin-left:auto; }
-    .top-row { display:flex; align-items:center; gap:8px; }
-    .text-sm { font-size:12px; color:#d1d5db; }
-    .text-sm-dark { font-size:12px; color:#6b7280; }
-    .env-warning { font-size:11px; color:#b91c1c; margin-top:4px; }
-    .qty-pill { font-size:11px; padding:2px 8px; border-radius:999px; background:#ecfeff; color:#0e7490; }
-    .low { background:#fef2f2; color:#b91c1c; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+    }
+    header {
+      background: #111827;
+      color: white;
+      padding: 12px 16px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 12px 12px 40px;
+    }
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 12px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
+      flex: 1 1 320px;
+    }
+    h2 {
+      font-size: 16px;
+      margin: 0 0 8px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      margin-top: 6px;
+      color: #4b5563;
+    }
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 6px 8px;
+      margin-top: 2px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+    textarea {
+      min-height: 60px;
+      resize: vertical;
+    }
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .btn-primary {
+      background: #111827;
+      color: white;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .btn-danger {
+      background: #b91c1c;
+      color: white;
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .col-2 {
+      flex: 1 1 calc(50% - 4px);
+      min-width: 140px;
+    }
+    .col-3 {
+      flex: 1 1 calc(33.3% - 6px);
+      min-width: 110px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+    th,
+    td {
+      padding: 6px 4px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+    }
+    th {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #6b7280;
+    }
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .filter-row input,
+    .filter-row select {
+      max-width: 180px;
+    }
+    .pill {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #3730a3;
+      display: inline-block;
+      margin-left: auto;
+    }
+    .top-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .text-sm {
+      font-size: 12px;
+      color: #d1d5db;
+    }
+    .text-sm-dark {
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .env-warning {
+      font-size: 11px;
+      color: #b91c1c;
+      margin-top: 4px;
+    }
+    .qty-pill {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #ecfeff;
+      color: #0e7490;
+    }
+    .low {
+      background: #fef2f2;
+      color: #b91c1c;
+    }
   </style>
 </head>
 <body>
 <header>
   <div class="container">
     <div class="top-row">
-      <h1>Paint Inventory â€“ E Collision (Cloud)</h1>
+      <h1>Paint Inventory – E Collision (Cloud)</h1>
       <span class="pill" id="totalCountPill">0 Items</span>
     </div>
     <div class="text-sm">Shared across phones. Requires Supabase URL + anon key configured in the code.</div>
@@ -57,6 +183,7 @@
     <div class="card">
       <h2>New / Edit Paint</h2>
       <div class="env-warning" id="envWarning"></div>
+
       <div class="row">
         <div class="col-2">
           <label for="brand">Brand</label>
@@ -67,6 +194,7 @@
           <input id="paint_code" placeholder="e.g. WA8624 / 1K3" />
         </div>
       </div>
+
       <div class="row">
         <div class="col-2">
           <label for="color_name">Color Name</label>
@@ -83,6 +211,7 @@
           </select>
         </div>
       </div>
+
       <div class="row">
         <div class="col-2">
           <label for="quantity">Quantity in Stock</label>
@@ -93,6 +222,7 @@
           <input id="cost" type="number" step="0.01" placeholder="e.g. 120.00" />
         </div>
       </div>
+
       <div class="row">
         <div class="col-2">
           <label for="supplier">Supplier</label>
@@ -103,6 +233,7 @@
           <input id="invoice_number" placeholder="e.g. INV-12345" />
         </div>
       </div>
+
       <div class="row">
         <div class="col-2">
           <label for="received_date">Received Date</label>
@@ -110,24 +241,31 @@
         </div>
         <div class="col-2"></div>
       </div>
+
       <label for="notes">Notes</label>
       <textarea id="notes" placeholder="Blend, special mix, OEM code, etc."></textarea>
 
-<div class="row" style="margin-top:8px;">
-  <button class="btn-primary" type="button" onclick="savePaint()">Save Paint</button>
-  <button class="btn-secondary" type="button" onclick="clearForm()">Clear Form</button>
-  <button class="btn-secondary" type="button" onclick="triggerInvoiceCapture()">Scan Invoice (OCR)</button>
-  <button class="btn-danger" type="button" onclick="deletePaint()" id="deleteBtn" style="display:none;">Delete</button>
-</div>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn-primary" type="button" onclick="savePaint()">Save Paint</button>
+        <button class="btn-secondary" type="button" onclick="clearForm()">Clear Form</button>
+        <button class="btn-secondary" type="button" onclick="triggerInvoiceCapture()">Scan Invoice (OCR)</button>
+        <button class="btn-danger" type="button" onclick="deletePaint()" id="deleteBtn" style="display:none;">Delete</button>
+      </div>
 
-<!-- Hidden file input for camera -->
-<input
-  id="invoiceImageInput"
-  type="file"
-  accept="image/*"
-  capture="environment"
-  style="display:none"
-/>
+      <!-- Hidden camera/file input for OCR -->
+      <input
+        id="invoiceImageInput"
+        type="file"
+        accept="image/*"
+        capture="environment"
+        style="display:none"
+      />
+
+      <div class="text-sm-dark" id="formHint" style="margin-top:6px;">
+        New item – brand + paint code recommended.
+      </div>
+    </div>
+
     <!-- Inventory List -->
     <div class="card">
       <h2>Inventory</h2>
@@ -166,65 +304,9 @@
 </div>
 
 <script>
-function triggerInvoiceCapture() {
-  const input = document.getElementById("invoiceImageInput");
-  if (!input) return;
-  input.value = ""; // reset
-  input.onchange = handleInvoiceImageSelected;
-  input.click();
-}
-
-function handleInvoiceImageSelected(event) {
-  const file = event.target.files && event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = async () => {
-    const base64 = reader.result; // "data:image/jpeg;base64,..."
-    try {
-      document.getElementById("formHint").textContent = "Sending to OCR...";
-      const res = await fetch("/.netlify/functions/ocr-invoice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: base64 }),
-      });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error("OCR error: " + txt);
-      }
-      const data = await res.json();
-
-      // Fill fields from OCR result (placeholder for now)
-      if (data.supplier) {
-        document.getElementById("supplier").value = data.supplier;
-      }
-      if (data.invoice_number) {
-        document.getElementById("invoice_number").value = data.invoice_number;
-      }
-      if (data.cost != null) {
-        document.getElementById("cost").value = data.cost;
-      }
-      if (data.notes) {
-        const notesEl = document.getElementById("notes");
-        if (notesEl.value) {
-          notesEl.value = notesEl.value + "\n" + data.notes;
-        } else {
-          notesEl.value = data.notes;
-        }
-      }
-
-      document.getElementById("formHint").textContent = "OCR filled some fields. Review & Save.";
-    } catch (e) {
-      console.error(e);
-      alert("Could not process invoice image. " + e.message);
-      document.getElementById("formHint").textContent = "OCR failed. Enter fields manually.";
-    }
-  };
-  reader.readAsDataURL(file);
-}
-  // ====== SUPABASE CONFIG ======
-  const SUPABASE_URL = "https://xmbochwqaeakijotbcof.supabase.co"; // change this
-  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtYm9jaHdxYWVha2lqb3RiY29mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjI5MTIsImV4cCI6MjA4NDU5ODkxMn0.YoxRzHEDrM9pDNEOL7mLaJewzcGB3jbZ-rc4IkR1hmQ";             // and this
+  // ====== SUPABASE CONFIG – CHANGE THESE ======
+  const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co"; // TODO: change this
+  const SUPABASE_KEY = "YOUR_ANON_PUBLIC_KEY";             // TODO: change this
   const TABLE = "paint_inventory";
 
   function supabaseConfigured() {
@@ -274,42 +356,61 @@ function handleInvoiceImageSelected(event) {
     try {
       PAINTS = await loadPaintsFromCloud();
       renderPaints();
-      document.getElementById("formHint").textContent = "Loaded from cloud.";
+      const hintEl = document.getElementById("formHint");
+      if (hintEl) hintEl.textContent = "Loaded from cloud.";
     } catch (e) {
       console.error(e);
-      document.getElementById("formHint").textContent = "Could not load from cloud. Check Supabase config.";
+      const hintEl = document.getElementById("formHint");
+      if (hintEl) hintEl.textContent = "Could not load from cloud. Check Supabase config.";
     }
   }
 
   function clearForm() {
-    ["brand","paint_code","color_name","size","quantity","cost","supplier","invoice_number","received_date","notes"].forEach(id => {
+    const ids = [
+      "brand",
+      "paint_code",
+      "color_name",
+      "size",
+      "quantity",
+      "cost",
+      "supplier",
+      "invoice_number",
+      "received_date",
+      "notes"
+    ];
+    ids.forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
       if (id === "size") el.value = "Quart";
       else el.value = "";
     });
-    document.getElementById("formHint").textContent = "New item â€“ brand + paint code recommended.";
-    document.getElementById("deleteBtn").style.display = "none";
+    const hintEl = document.getElementById("formHint");
+    if (hintEl) hintEl.textContent = "New item – brand + paint code recommended.";
+    const delBtn = document.getElementById("deleteBtn");
+    if (delBtn) delBtn.style.display = "none";
   }
 
   function findExistingPaint(brand, code, size) {
-    return PAINTS.find(p =>
-      (p.brand || "").toLowerCase() === brand.toLowerCase() &&
-      (p.paint_code || "").toLowerCase() === code.toLowerCase() &&
-      (p.size || "").toLowerCase() === size.toLowerCase()
+    return PAINTS.find(
+      (p) =>
+        (p.brand || "").toLowerCase() === brand.toLowerCase() &&
+        (p.paint_code || "").toLowerCase() === code.toLowerCase() &&
+        (p.size || "").toLowerCase() === size.toLowerCase()
     );
   }
 
   async function savePaint() {
-    const brand = document.getElementById("brand").value.trim();
-    const paint_code = document.getElementById("paint_code").value.trim();
-    const size = document.getElementById("size").value;
+    const brand = (document.getElementById("brand")?.value || "").trim();
+    const paint_code = (document.getElementById("paint_code")?.value || "").trim();
+    const size = document.getElementById("size")?.value || "Quart";
+
     if (!brand && !paint_code) {
       alert("At least Brand or Paint Code is required.");
       return;
     }
-    const quantityStr = document.getElementById("quantity").value.trim();
-    const costStr = document.getElementById("cost").value.trim();
+
+    const quantityStr = (document.getElementById("quantity")?.value || "").trim();
+    const costStr = (document.getElementById("cost")?.value || "").trim();
     const qty = quantityStr ? parseFloat(quantityStr) : null;
     const cost = costStr ? parseFloat(costStr) : null;
 
@@ -318,28 +419,30 @@ function handleInvoiceImageSelected(event) {
       id: existing ? existing.id : undefined,
       brand,
       paint_code,
-      color_name: document.getElementById("color_name").value.trim(),
+      color_name: (document.getElementById("color_name")?.value || "").trim(),
       size,
       quantity: qty,
       cost,
-      supplier: document.getElementById("supplier").value.trim(),
-      invoice_number: document.getElementById("invoice_number").value.trim(),
-      received_date: document.getElementById("received_date").value || null,
-      notes: document.getElementById("notes").value.trim(),
+      supplier: (document.getElementById("supplier")?.value || "").trim(),
+      invoice_number: (document.getElementById("invoice_number")?.value || "").trim(),
+      received_date: document.getElementById("received_date")?.value || null,
+      notes: (document.getElementById("notes")?.value || "").trim(),
       updated_at: new Date().toISOString()
     };
 
     try {
       const res = await upsertPaintToCloud(item);
       const saved = res[0];
-      const idx = PAINTS.findIndex(p => p.id === saved.id);
+      const idx = PAINTS.findIndex((p) => p.id === saved.id);
       if (idx >= 0) {
         PAINTS[idx] = saved;
       } else {
         PAINTS.push(saved);
       }
-      document.getElementById("formHint").textContent = "Saved to cloud.";
-      document.getElementById("deleteBtn").style.display = "inline-block";
+      const hintEl = document.getElementById("formHint");
+      if (hintEl) hintEl.textContent = "Saved to cloud.";
+      const delBtn = document.getElementById("deleteBtn");
+      if (delBtn) delBtn.style.display = "inline-block";
       renderPaints();
     } catch (e) {
       console.error(e);
@@ -348,18 +451,20 @@ function handleInvoiceImageSelected(event) {
   }
 
   async function deletePaint() {
-    const brand = document.getElementById("brand").value.trim();
-    const paint_code = document.getElementById("paint_code").value.trim();
-    const size = document.getElementById("size").value;
+    const brand = (document.getElementById("brand")?.value || "").trim();
+    const paint_code = (document.getElementById("paint_code")?.value || "").trim();
+    const size = document.getElementById("size")?.value || "Quart";
+
     const existing = findExistingPaint(brand, paint_code, size);
     if (!existing) {
       alert("No matching paint item found to delete.");
       return;
     }
     if (!confirm("Delete this paint item from cloud?")) return;
+
     try {
       await deletePaintFromCloud(existing.id);
-      PAINTS = PAINTS.filter(p => p.id !== existing.id);
+      PAINTS = PAINTS.filter((p) => p.id !== existing.id);
       clearForm();
       renderPaints();
     } catch (e) {
@@ -369,48 +474,57 @@ function handleInvoiceImageSelected(event) {
   }
 
   function loadPaintIntoForm(id) {
-    const p = PAINTS.find(x => x.id === id);
+    const p = PAINTS.find((x) => x.id === id);
     if (!p) return;
-    document.getElementById("brand").value = p.brand || "";
-    document.getElementById("paint_code").value = p.paint_code || "";
-    document.getElementById("color_name").value = p.color_name || "";
-    document.getElementById("size").value = p.size || "Quart";
-    document.getElementById("quantity").value = p.quantity != null ? p.quantity : "";
-    document.getElementById("cost").value = p.cost != null ? p.cost : "";
-    document.getElementById("supplier").value = p.supplier || "";
-    document.getElementById("invoice_number").value = p.invoice_number || "";
-    document.getElementById("received_date").value = p.received_date || "";
-    document.getElementById("notes").value = p.notes || "";
-    document.getElementById("formHint").textContent = "Editing existing paint item (cloud).";
-    document.getElementById("deleteBtn").style.display = "inline-block";
+    const setVal = (id, v) => {
+      const el = document.getElementById(id);
+      if (el) el.value = v ?? "";
+    };
+    setVal("brand", p.brand || "");
+    setVal("paint_code", p.paint_code || "");
+    setVal("color_name", p.color_name || "");
+    setVal("size", p.size || "Quart");
+    setVal("quantity", p.quantity != null ? p.quantity : "");
+    setVal("cost", p.cost != null ? p.cost : "");
+    setVal("supplier", p.supplier || "");
+    setVal("invoice_number", p.invoice_number || "");
+    setVal("received_date", p.received_date || "");
+    setVal("notes", p.notes || "");
+    const hintEl = document.getElementById("formHint");
+    if (hintEl) hintEl.textContent = "Editing existing paint item (cloud).";
+    const delBtn = document.getElementById("deleteBtn");
+    if (delBtn) delBtn.style.display = "inline-block";
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function renderPaints() {
     const body = document.getElementById("paintBody");
-    const filterBrand = document.getElementById("filterBrand").value.trim().toLowerCase();
-    const filterSearch = document.getElementById("filterSearch").value.trim().toLowerCase();
-    const filterLow = document.getElementById("filterLow").value;
+    if (!body) return;
+
+    const filterBrand = (document.getElementById("filterBrand")?.value || "").trim().toLowerCase();
+    const filterSearch = (document.getElementById("filterSearch")?.value || "").trim().toLowerCase();
+    const filterLow = document.getElementById("filterLow")?.value || "All";
 
     body.innerHTML = "";
 
     let filtered = PAINTS.slice();
 
     if (filterBrand) {
-      filtered = filtered.filter(p => (p.brand || "").toLowerCase().includes(filterBrand));
+      filtered = filtered.filter((p) => (p.brand || "").toLowerCase().includes(filterBrand));
     }
     if (filterSearch) {
-      filtered = filtered.filter(p =>
-        (p.paint_code || "").toLowerCase().includes(filterSearch) ||
-        (p.color_name || "").toLowerCase().includes(filterSearch) ||
-        (p.notes || "").toLowerCase().includes(filterSearch)
+      filtered = filtered.filter(
+        (p) =>
+          (p.paint_code || "").toLowerCase().includes(filterSearch) ||
+          (p.color_name || "").toLowerCase().includes(filterSearch) ||
+          (p.notes || "").toLowerCase().includes(filterSearch)
       );
     }
     if (filterLow === "LowOnly") {
-      filtered = filtered.filter(p => p.quantity != null && p.quantity <= 0.5);
+      filtered = filtered.filter((p) => p.quantity != null && p.quantity <= 0.5);
     }
 
-    filtered.sort((a,b) => {
+    filtered.sort((a, b) => {
       const ba = (a.brand || "").toLowerCase();
       const bb = (b.brand || "").toLowerCase();
       if (ba < bb) return -1;
@@ -422,7 +536,7 @@ function handleInvoiceImageSelected(event) {
       return 0;
     });
 
-    filtered.forEach(p => {
+    filtered.forEach((p) => {
       const low = p.quantity != null && p.quantity <= 0.5;
       const tr = document.createElement("tr");
       tr.innerHTML = `
@@ -436,7 +550,86 @@ function handleInvoiceImageSelected(event) {
       body.appendChild(tr);
     });
 
-    document.getElementById("totalCountPill").textContent = PAINTS.length + " Item" + (PAINTS.length === 1 ? "" : "s");
+    const pill = document.getElementById("totalCountPill");
+    if (pill) {
+      pill.textContent = PAINTS.length + " Item" + (PAINTS.length === 1 ? "" : "s");
+    }
+  }
+
+  // ====== OCR CAMERA ? NETLIFY FUNCTION ======
+  function triggerInvoiceCapture() {
+    const input = document.getElementById("invoiceImageInput");
+    if (!input) {
+      alert("Camera input not found in the page.");
+      return;
+    }
+    input.value = ""; // reset
+    input.onchange = handleInvoiceImageSelected;
+    input.click();
+  }
+
+  function handleInvoiceImageSelected(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result; // data:image/jpeg;base64,...
+
+      const setHint = (msg) => {
+        const hintEl = document.getElementById("formHint");
+        if (hintEl) hintEl.textContent = msg;
+      };
+
+      const setValueIfExists = (id, value) => {
+        if (value == null) return;
+        const el = document.getElementById(id);
+        if (el) el.value = value;
+      };
+
+      try {
+        setHint("Sending to OCR...");
+
+        const res = await fetch("/.netlify/functions/ocr-invoice", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageBase64: base64 })
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error("OCR error: " + txt);
+        }
+
+        const data = await res.json();
+
+        // Fill from OCR placeholder data
+        setValueIfExists("supplier", data.supplier);
+        setValueIfExists("invoice_number", data.invoice_number);
+        if (data.cost != null) {
+          setValueIfExists("cost", data.cost);
+        }
+
+        if (data.notes) {
+          const notesEl = document.getElementById("notes");
+          if (notesEl) {
+            if (notesEl.value) {
+              notesEl.value = notesEl.value + "\n" + data.notes;
+            } else {
+              notesEl.value = data.notes;
+            }
+          }
+        }
+
+        setHint("OCR filled some fields. Review & Save.");
+      } catch (e) {
+        console.error(e);
+        alert("Could not process invoice image. " + e.message);
+        setHint("OCR failed. Enter fields manually.");
+      }
+    };
+
+    reader.readAsDataURL(file);
   }
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -446,9 +639,11 @@ function handleInvoiceImageSelected(event) {
     }
     const warningEl = document.getElementById("envWarning");
     if (!supabaseConfigured()) {
-      warningEl.textContent = "Supabase not configured yet â€“ edit index.html to set SUPABASE_URL and SUPABASE_KEY, then re-upload.";
+      if (warningEl) {
+        warningEl.textContent = "Supabase not configured yet – edit index.html to set SUPABASE_URL and SUPABASE_KEY, then re-upload.";
+      }
     } else {
-      warningEl.textContent = "";
+      if (warningEl) warningEl.textContent = "";
       refreshPaints();
     }
   });
