@@ -113,14 +113,21 @@
       <label for="notes">Notes</label>
       <textarea id="notes" placeholder="Blend, special mix, OEM code, etc."></textarea>
 
-      <div class="row" style="margin-top:8px;">
-        <button class="btn-primary" type="button" onclick="savePaint()">Save Paint</button>
-        <button class="btn-secondary" type="button" onclick="clearForm()">Clear Form</button>
-        <button class="btn-danger" type="button" onclick="deletePaint()" id="deleteBtn" style="display:none;">Delete</button>
-      </div>
-      <div class="text-sm-dark" id="formHint" style="margin-top:6px;">New item – brand + paint code recommended.</div>
-    </div>
+<div class="row" style="margin-top:8px;">
+  <button class="btn-primary" type="button" onclick="savePaint()">Save Paint</button>
+  <button class="btn-secondary" type="button" onclick="clearForm()">Clear Form</button>
+  <button class="btn-secondary" type="button" onclick="triggerInvoiceCapture()">Scan Invoice (OCR)</button>
+  <button class="btn-danger" type="button" onclick="deletePaint()" id="deleteBtn" style="display:none;">Delete</button>
+</div>
 
+<!-- Hidden file input for camera -->
+<input
+  id="invoiceImageInput"
+  type="file"
+  accept="image/*"
+  capture="environment"
+  style="display:none"
+/>
     <!-- Inventory List -->
     <div class="card">
       <h2>Inventory</h2>
@@ -159,6 +166,62 @@
 </div>
 
 <script>
+function triggerInvoiceCapture() {
+  const input = document.getElementById("invoiceImageInput");
+  if (!input) return;
+  input.value = ""; // reset
+  input.onchange = handleInvoiceImageSelected;
+  input.click();
+}
+
+function handleInvoiceImageSelected(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const base64 = reader.result; // "data:image/jpeg;base64,..."
+    try {
+      document.getElementById("formHint").textContent = "Sending to OCR...";
+      const res = await fetch("/.netlify/functions/ocr-invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64 }),
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error("OCR error: " + txt);
+      }
+      const data = await res.json();
+
+      // Fill fields from OCR result (placeholder for now)
+      if (data.supplier) {
+        document.getElementById("supplier").value = data.supplier;
+      }
+      if (data.invoice_number) {
+        document.getElementById("invoice_number").value = data.invoice_number;
+      }
+      if (data.cost != null) {
+        document.getElementById("cost").value = data.cost;
+      }
+      if (data.notes) {
+        const notesEl = document.getElementById("notes");
+        if (notesEl.value) {
+          notesEl.value = notesEl.value + "\n" + data.notes;
+        } else {
+          notesEl.value = data.notes;
+        }
+      }
+
+      document.getElementById("formHint").textContent = "OCR filled some fields. Review & Save.";
+    } catch (e) {
+      console.error(e);
+      alert("Could not process invoice image. " + e.message);
+      document.getElementById("formHint").textContent = "OCR failed. Enter fields manually.";
+    }
+  };
+  reader.readAsDataURL(file);
+}
   // ====== SUPABASE CONFIG ======
   const SUPABASE_URL = "https://xmbochwqaeakijotbcof.supabase.co"; // change this
   const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtYm9jaHdxYWVha2lqb3RiY29mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjI5MTIsImV4cCI6MjA4NDU5ODkxMn0.YoxRzHEDrM9pDNEOL7mLaJewzcGB3jbZ-rc4IkR1hmQ";             // and this
