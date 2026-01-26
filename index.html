@@ -305,8 +305,8 @@
 
 <script>
   // ====== SUPABASE CONFIG – CHANGE THESE ======
-  const SUPABASE_URL = "https://xmbochwqaeakijotbcof.supabase.co"; // TODO: change this
-  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtYm9jaHdxYWVha2lqb3RiY29mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjI5MTIsImV4cCI6MjA4NDU5ODkxMn0.YoxRzHEDrM9pDNEOL7mLaJewzcGB3jbZ-rc4IkR1hmQ";             // TODO: change this
+  const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co"; // TODO: change this
+  const SUPABASE_KEY = "YOUR_ANON_PUBLIC_KEY";             // TODO: change this
   const TABLE = "paint_inventory";
 
   function supabaseConfigured() {
@@ -568,6 +568,42 @@
     input.click();
   }
 
+  // Helper: extract paint code from notes (robust)
+  function extractPaintCodeFromNotes(notes) {
+    if (!notes) return null;
+
+    const lines = notes.split("\n").map(l => l.trim()).filter(Boolean);
+    const badWords = [
+      "MIPA","PPG","BASF","SHERWIN","DUPONT","SPI","STANDOX",
+      "PAINT","MY","RIDE","WHITE","BLACK","SILVER","GRAY","GREY",
+      "RED","BLUE","GREEN","GM","CHEV","CHEVY","GM/CHEV"
+    ];
+
+    // 1) Look for WA codes first (WA8624)
+    for (const line of lines) {
+      const m = line.match(/WA\d{3,5}/i);
+      if (m) return m[0].toUpperCase();
+    }
+
+    // 2) Otherwise, look for short alphanumeric tokens (2–6 chars, with letters+digits)
+    for (const line of lines) {
+      const tokens = line
+        .split(/[|\s]+/)
+        .map(t => t.trim())
+        .filter(Boolean);
+
+      for (const tok of tokens) {
+        const up = tok.toUpperCase();
+        if (badWords.includes(up)) continue;
+        if (up.length < 2 || up.length > 6) continue;
+        if (!/[A-Z]/.test(up) || !/[0-9]/.test(up)) continue;
+        return up;
+      }
+    }
+
+    return null;
+  }
+
   function handleInvoiceImageSelected(event) {
     const file = event.target.files && event.target.files[0];
     if (!file) return;
@@ -622,16 +658,11 @@
           }
         }
 
-        // 3) Auto-fill paint_code from first formatted notes line:
-        // Expected: "MAKE | CODE | COLOR | QTY UNIT"
-        if (data.notes) {
-          const firstLine = data.notes.split("\n")[0].trim();
-          if (firstLine) {
-            const parts = firstLine.split("|").map(p => p.trim());
-            if (parts.length >= 2 && parts[1]) {
-              setValueIfExists("paint_code", parts[1]);
-            }
-          }
+        // 3) Auto-fill paint_code from notes using regex (WA codes or short codes)
+        const notesText = data.notes || document.getElementById("notes")?.value || "";
+        const foundCode = extractPaintCodeFromNotes(notesText);
+        if (foundCode) {
+          setValueIfExists("paint_code", foundCode);
         }
 
         setHint("OCR filled fields from invoice. Review & Save.");
