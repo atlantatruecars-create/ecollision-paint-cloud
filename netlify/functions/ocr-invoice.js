@@ -51,9 +51,9 @@ exports.handler = async (event) => {
       ],
     };
 
-    // Call Google Vision API
     const visionUrl = `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`;
 
+    // Call Google Vision API
     const visionRes = await fetch(visionUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -67,7 +67,6 @@ exports.handler = async (event) => {
 
     const visionData = await visionRes.json();
     const resp = (visionData.responses && visionData.responses[0]) || {};
-
     const fullText =
       (resp.fullTextAnnotation && resp.fullTextAnnotation.text) || "";
 
@@ -84,13 +83,12 @@ exports.handler = async (event) => {
       };
     }
 
-    // ---- Simple parsing helpers ----
+    // ---- Extract key fields from text ----
     const supplier = extractSupplier(fullText);
     const invoiceNumber = extractInvoiceNumber(fullText);
     const cost = extractTotalAmount(fullText);
-
-    // Truncate notes a bit so it's not crazy long
-    const notesSnippet = fullText.length > 800 ? fullText.slice(0, 800) + "..." : fullText;
+    const notesSnippet = extractLineItems(fullText) ||
+      (fullText.length > 800 ? fullText.slice(0, 800) + "..." : fullText);
 
     const parsed = {
       supplier,
@@ -114,86 +112,112 @@ exports.handler = async (event) => {
   }
 };
 
-// ----- Parsing helpers -----
+// =====================
+// Parsing helpers tuned for invoices like "Paint My Ride"
+// =====================
 
 function extractSupplier(text) {
-  // Take the first non-empty line that doesn't look like "Invoice", "Total", etc.
   const lines = text
     .split(/\r?\n/)
     .map((l) => l.trim())
-    .filter((l) => l.length > 0);
+    .filter(Boolean);
 
   if (lines.length === 0) return "";
 
-  for (const line of lines) {
+  // Look at the top few lines (where PAINT MY RIDE lives)
+  for (let i = 0; i < Math.min(lines.length, 10); i++) {
+    const line = lines[i];
+
     const lower = line.toLowerCase();
     if (
       lower.includes("invoice") ||
       lower.includes("bill to") ||
       lower.includes("ship to") ||
-      lower.includes("total")
+      lower.includes("amount due") ||
+      lower.includes("total") ||
+      lower.includes("page") ||
+      lower.includes("date") ||
+      lower.includes("tucker, ga") || // address line, skip
+      lower.includes("www.") ||       // website, skip
+      lower.includes(".com")
     ) {
       continue;
     }
-    // avoid lines that are mostly numbers
-    const digitCount = (line.match(/\d/g) || []).length;
-    if (digitCount > line.length * 0.5) continue;
+
+    // Must have some letters
+    const letters = (line.match(/[a-z]/gi) || []).length;
+    if (letters < 4) continue;
+
+    // Not mostly numbers
+    const digits = (line.match(/\d/g) || []).length;
+    if (digits > line.length * 0.5) continue;
+
     return line;
   }
 
-  // fallback: first line
+  // fallback: first non-empty line
   return lines[0];
 }
 
 function extractInvoiceNumber(text) {
-  // Try patterns like INV-12345, Invoice # 12345, etc.
-  const invRegexes = [
-    /invoice\s*#\s*([A-Za-z0-9\-]+)/i,
-    /invoice\s*no\.?\s*([A-Za-z0-9\-]+)/i,
-    /inv[\s\-:]*([A-Za-z0-9\-]+)/i,
+  // Specific style: "Invoice # 1807583"
+  const m = text.match(/Invoice\s*#\s*([0-9]+)/i);
+  if (m && m[1]) return m[1];
+
+  // More generic fallbacks
+  const patterns = [
+    /invoice\s*no\.?\s*[:\-]?\s*([A-Za-z0-9\-]+)/i,
+    /invoice\s*number\s*[:\-]?\s*([A-Za-z0-9\-]+)/i,
+    /inv[\s\-:]*#?\s*([A-Za-z0-9\-]+)/i,
   ];
 
-  for (const re of invRegexes) {
-    const m = text.match(re);
-    if (m && m[1]) return m[1];
+  for (const re of patterns) {
+    const mm = text.match(re);
+    if (mm && mm[1]) return mm[1];
   }
 
-  // Fallback: find a line containing "invoice"
+  // Fallback: return the line that contains the word "invoice"
   const line = text
     .split(/\r?\n/)
+    .map((l) => l.trim())
     .find((l) => l.toLowerCase().includes("invoice"));
+
   return line || "";
 }
 
 function extractTotalAmount(text) {
-  // Try to find "Total" or "Amount Due" lines with amounts
-  const totalRegexes = [
-    /(total|amount due|balance due)[^\d]*([\$]?\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
-    /([\$]\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(total)/i,
-  ];
+  // Look specifically for "Total $202.00" or "Total 202.00"
+  const m = text.match(/Total\s*\$?\s*([\d,]+\.\d{2})/i);
+  if (m && m[1]) {
+    return parseFloat(m[1].replace(/,/g, ""));
+  }
 
-  for (const re of totalRegexes) {
-    const m = text.match(re);
-    if (m && m[2]) {
-      const amtStr = m[2].replace(/[^0-9.,]/g, "").replace(/,/g, "");
-      const num = parseFloat(amtStr);
-      if (!isNaN(num)) return num;
-    } else if (m && m[1]) {
-      const amtStr = m[1].replace(/[^0-9.,]/g, "").replace(/,/g, "");
-      const num = parseFloat(amtStr);
-      if (!isNaN(num)) return num;
+  // Fallback: Amount Due / Balance Due
+  const alt = text.match(
+    /(amount due|balance due)\s*\$?\s*([\d,]+\.\d{2})/i
+  );
+  if (alt && alt[2]) {
+    return parseFloat(alt[2].replace(/,/g, ""));
+  }
+
+  return null;
+}
+
+// Pull out paint line items into notes
+function extractLineItems(text) {
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const items = [];
+
+  for (const line of lines) {
+    // Capture lines like: "Paint 2 Quarts k3g 122.00 122.00"
+    if (/paint/i.test(line) && /\d+\.\d{2}/.test(line)) {
+      items.push(line);
     }
   }
 
-  // Fallback: biggest money-like number in the whole text
-  const moneyMatches = text.match(/[\$]?\d{1,3}(?:,\d{3})*(?:\.\d{2})?/g) || [];
-  let best = null;
-  for (const m of moneyMatches) {
-    const amtStr = m.replace(/[^0-9.,]/g, "").replace(/,/g, "");
-    const num = parseFloat(amtStr);
-    if (!isNaN(num)) {
-      if (best === null || num > best) best = num;
-    }
-  }
-  return best;
+  return items.join("\n");
 }
