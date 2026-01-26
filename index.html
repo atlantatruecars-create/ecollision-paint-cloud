@@ -191,7 +191,7 @@
         </div>
         <div class="col-2">
           <label for="paint_code">Paint Code</label>
-          <input id="paint_code" placeholder="e.g. WA8624 / 1K3" />
+          <input id="paint_code" placeholder="e.g. WA8624 / k3g" />
         </div>
       </div>
 
@@ -230,7 +230,7 @@
         </div>
         <div class="col-2">
           <label for="invoice_number">Invoice #</label>
-          <input id="invoice_number" placeholder="e.g. INV-12345" />
+          <input id="invoice_number" placeholder="e.g. 1807583" />
         </div>
       </div>
 
@@ -243,7 +243,7 @@
       </div>
 
       <label for="notes">Notes</label>
-      <textarea id="notes" placeholder="Blend, special mix, OEM code, etc."></textarea>
+      <textarea id="notes" placeholder="GM/CHEV | WA8624 | WHITE 85-26 | 0.5 Pint"></textarea>
 
       <div class="row" style="margin-top:8px;">
         <button class="btn-primary" type="button" onclick="savePaint()">Save Paint</button>
@@ -321,7 +321,7 @@
     headers["apikey"] = SUPABASE_KEY;
     headers["Authorization"] = "Bearer " + SUPABASE_KEY;
     headers["Content-Type"] = "application/json";
-    headers["Prefer"] = "return=representation";
+    headers["Prefer"] = headers["Prefer"] || "return=representation";
     options.headers = headers;
     const res = await fetch(url, options);
     if (!res.ok) {
@@ -341,7 +341,7 @@
     return await fetchJSON(url, {
       method: "POST",
       body: JSON.stringify([item]),
-      headers: { "Prefer": "resolution=merge-duplicates" }
+      headers: { "Prefer": "resolution=merge-duplicates,return=representation" }
     });
   }
 
@@ -603,13 +603,14 @@
 
         const data = await res.json();
 
-        // Fill from OCR placeholder data
+        // 1) Fill supplier / invoice / cost
         setValueIfExists("supplier", data.supplier);
         setValueIfExists("invoice_number", data.invoice_number);
         if (data.cost != null) {
           setValueIfExists("cost", data.cost);
         }
 
+        // 2) Fill notes (append if already has something)
         if (data.notes) {
           const notesEl = document.getElementById("notes");
           if (notesEl) {
@@ -621,7 +622,19 @@
           }
         }
 
-        setHint("OCR filled some fields. Review & Save.");
+        // 3) Auto-fill paint_code from first formatted notes line:
+        // Expected: "MAKE | CODE | COLOR | QTY UNIT"
+        if (data.notes) {
+          const firstLine = data.notes.split("\n")[0].trim();
+          if (firstLine) {
+            const parts = firstLine.split("|").map(p => p.trim());
+            if (parts.length >= 2 && parts[1]) {
+              setValueIfExists("paint_code", parts[1]);
+            }
+          }
+        }
+
+        setHint("OCR filled fields from invoice. Review & Save.");
       } catch (e) {
         console.error(e);
         alert("Could not process invoice image. " + e.message);
