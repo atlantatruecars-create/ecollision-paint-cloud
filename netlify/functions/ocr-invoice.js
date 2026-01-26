@@ -84,11 +84,10 @@ exports.handler = async (event) => {
       supplier: extractSupplier(text),
       invoice_number: extractInvoiceNumber(text),
       cost: extractTotal(text),
-      // Main thing you care about:
-      // makes, codes, colors, quantities from each "Paint ..." line
+      // Notes: structured paint items first, then fallback
       notes:
         formatPaintItems(text) ||
-        extractLineItems(text) ||
+        extractPaintLinesFallback(text) ||
         text.slice(0, 800),
     };
 
@@ -167,9 +166,8 @@ function extractTotal(text) {
 }
 
 /**
- * Top-level formatter for paint lines.
- * Produces lines like:
- *   GM/Chevy | WA8624 | White | 0.5 Pint
+ * Main: parse all real paint line items and return pretty lines like:
+ *   GM/CHEV | WA8624 | WHITE 85-26 | 0.5 Pint
  */
 function formatPaintItems(text) {
   const lines = text
@@ -180,10 +178,14 @@ function formatPaintItems(text) {
   const parsedItems = [];
 
   for (const line of lines) {
+    // Only handle lines that look like REAL paint items:
+    // must contain "Paint", a number, and a unit word
     if (!/paint/i.test(line)) continue;
+    if (!/\d/.test(line)) continue; // no quantity? skip
+    if (!/(pint|quart|gallon|pt|qt|gal)/i.test(line)) continue;
 
     const parsed = parsePaintLineFlexible(line);
-    if (parsed) {
+    if (parsed && parsed.code) {
       parsedItems.push(
         `${parsed.make} | ${parsed.code} | ${parsed.color} | ${parsed.qty} ${parsed.unit}`
       );
@@ -196,16 +198,9 @@ function formatPaintItems(text) {
 
 /**
  * Flexible parser for lines like:
- *  "Paint 0.5 Pint GM/Chevy WA8624 White"
- *  "Paint 1 Pint WA8624 GM/Chevy White"
- *  "Paint 2 Quarts Chevy WA8624 Black"
- *  "Paint 1 Quart WA8624 Toyota Black"
- *
- * We only assume:
- *  - word "Paint" appears
- *  - a number quantity appears near it
- *  - a unit word (pint/quart/gallon) appears near that
- *  - a paint code appears somewhere (WA8624 or short alpha code)
+ *  "Paint 0.5 Pint MIPA GM/CHEV WA8624 WHITE 85-26"
+ *  "Paint 1 Pint GM/CHEV WA8624 WHITE"
+ *  "Paint 1 Pint WA8624 GM/CHEV WHITE"
  */
 function parsePaintLineFlexible(line) {
   const norm = line.replace(/\s+/g, " ").trim();
@@ -213,22 +208,26 @@ function parsePaintLineFlexible(line) {
 
   const tokens = norm.split(" ");
 
+  // 0) Find "Paint" index
   const pIdx = tokens.findIndex(
     (t) => t.toLowerCase() === "paint"
   );
   const startIdx = pIdx === -1 ? 0 : pIdx;
 
-  // 1) Find quantity (first number after "Paint")
+  // 1) Find quantity (first numeric token after "Paint")
   let qtyIdx = -1;
   let qty = null;
   for (let i = startIdx + 1; i < Math.min(tokens.length, startIdx + 6); i++) {
-    const num = parseFloat(tokens[i].replace(/[^\d.]/g, ""));
+    const cleaned = tokens[i].replace(/[^\d.]/g, "");
+    if (!cleaned) continue;
+    const num = parseFloat(cleaned);
     if (!isNaN(num)) {
       qtyIdx = i;
       qty = num;
       break;
     }
   }
+  if (qtyIdx === -1) return null; // no quantity → not a real line item
 
   // 2) Find unit near quantity
   const unitWords = [
@@ -244,79 +243,83 @@ function parsePaintLineFlexible(line) {
   ];
   let unitIdx = -1;
   let unit = "";
-  if (qtyIdx !== -1) {
-    for (let i = qtyIdx + 1; i < Math.min(tokens.length, qtyIdx + 4); i++) {
-      const low = tokens[i].toLowerCase();
-      if (unitWords.includes(low)) {
-        unitIdx = i;
-        unit = tokens[i];
-        break;
-      }
+  for (let i = qtyIdx + 1; i < Math.min(tokens.length, qtyIdx + 4); i++) {
+    const low = tokens[i].toLowerCase();
+    if (unitWords.includes(low)) {
+      unitIdx = i;
+      unit = tokens[i];
+      break;
     }
   }
+  if (!unit) return null; // must have unit
 
-  // If unit wasn't separate (like "0.5pint"), try same token as qty
-  if (!unit && qtyIdx !== -1) {
-    const low = tokens[qtyIdx].toLowerCase();
-    for (const uw of unitWords) {
-      if (low.includes(uw)) {
-        unit = uw;
-        break;
-      }
-    }
-  }
-
-  // 3) Find code: prefer WA####, otherwise a short all-caps/letters+numbers token
+  // 3) Prefer WA-code as paint code, otherwise short code
   let codeIdx = -1;
   let code = "";
-  const codeRegexes = [
-    /^wa\d{3,5}$/i, // WA8624, WA12345
-    /^[a-z0-9]{2,6}$/i, // small codes like k3g, a5g
-  ];
 
-  const searchFrom =
-    unitIdx !== -1 ? unitIdx + 1 :
-    qtyIdx !== -1 ? qtyIdx + 1 :
-    startIdx + 1;
+  const searchFrom = unitIdx + 1;
 
+  // 3a) Try WAxxxx pattern first
   for (let i = searchFrom; i < tokens.length; i++) {
-    const tok = tokens[i];
-    for (const re of codeRegexes) {
-      if (re.test(tok)) {
+    if (/^wa\d{3,5}$/i.test(tokens[i])) {
+      codeIdx = i;
+      code = tokens[i];
+      break;
+    }
+  }
+
+  // 3b) If no WAxxxx, try short 2–6 char alphanumeric code (k3g, a5g, etc.)
+  if (codeIdx === -1) {
+    for (let i = searchFrom; i < tokens.length; i++) {
+      const tok = tokens[i];
+      if (/^[A-Za-z0-9]{2,6}$/.test(tok)) {
         codeIdx = i;
         code = tok;
         break;
       }
     }
-    if (codeIdx !== -1) break;
   }
 
-  // 4) Make: usually between unit and code, OR between qty and code,
-  // OR sometimes before qty (rare).
+  // 4) Make:
+  // Usually between unitIdx+1 and codeIdx, but filter out brand words like MIPA, PPG, etc.
+  const brandWords = ["mipa", "ppg", "basf", "sherwin", "dupont", "spi", "standox"];
   let make = "Unknown";
-  if (codeIdx !== -1) {
-    let makeStart =
-      unitIdx !== -1
-        ? unitIdx + 1
-        : qtyIdx !== -1
-        ? qtyIdx + 1
-        : startIdx + 1;
-    if (makeStart < codeIdx) {
-      make = tokens.slice(makeStart, codeIdx).join(" ");
-    } else if (qtyIdx > startIdx + 1) {
-      // maybe: Paint GM/Chevy 0.5 Pint WA8624 White
-      make = tokens.slice(startIdx + 1, qtyIdx).join(" ");
+  if (codeIdx !== -1 && codeIdx > unitIdx + 1) {
+    const rawMakeTokens = tokens.slice(unitIdx + 1, codeIdx);
+    const filtered = rawMakeTokens.filter((t) => {
+      const low = t.toLowerCase();
+      return !brandWords.includes(low);
+    });
+    if (filtered.length > 0) {
+      make = filtered.join(" ");
+    }
+  } else if (codeIdx !== -1 && qtyIdx > startIdx + 1) {
+    // e.g. "Paint GM/CHEV 0.5 Pint WA8624 White"
+    const rawMakeTokens = tokens.slice(startIdx + 1, qtyIdx);
+    const filtered = rawMakeTokens.filter((t) => {
+      const low = t.toLowerCase();
+      return !brandWords.includes(low);
+    });
+    if (filtered.length > 0) {
+      make = filtered.join(" ");
     }
   }
 
-  // 5) Color: everything after code
+  // 5) Color: everything after the code, ignoring obvious numeric price at the end
   let color = "";
   if (codeIdx !== -1 && codeIdx < tokens.length - 1) {
-    color = tokens.slice(codeIdx + 1).join(" ");
+    let colorTokens = tokens.slice(codeIdx + 1);
+
+    // If the last token looks like a price (nnn.nn), drop it
+    const last = colorTokens[colorTokens.length - 1];
+    if (/\d+\.\d{2}/.test(last)) {
+      colorTokens = colorTokens.slice(0, -1);
+    }
+
+    color = colorTokens.join(" ");
   }
 
-  // Normalize unit
-  const normalizedUnit = normalizeUnit(unit || "");
+  const normalizedUnit = normalizeUnit(unit);
 
   return {
     qty: qty !== null ? qty : "",
@@ -339,7 +342,7 @@ function normalizeUnit(u) {
  * Very simple fallback if structured parse fails:
  * just keep any line that mentions "Paint"
  */
-function extractLineItems(text) {
+function extractPaintLinesFallback(text) {
   const lines = text
     .split(/\r?\n/)
     .map((l) => l.trim())
