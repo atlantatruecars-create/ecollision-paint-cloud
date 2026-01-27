@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Paint Inventory - E Collision (Cloud)</title>
+  <title>E Collision – Jobs & Paint Inventory (Cloud)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#111827" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png" />
+  <!-- jsQR for VIN barcode scanning -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <style>
     body {
       margin: 0;
@@ -17,28 +19,57 @@
     header {
       background: #111827;
       color: white;
-      padding: 12px 16px;
+      padding: 10px 16px;
     }
     header h1 {
       margin: 0;
-      font-size: 20px;
+      font-size: 18px;
     }
     .container {
-      max-width: 1100px;
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 12px 12px 40px;
+      padding: 10px 10px 40px;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .tab-btn {
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: none;
+      font-size: 13px;
+      cursor: pointer;
+      background: #374151;
+      color: #e5e7eb;
+    }
+    .tab-btn.active {
+      background: #fbbf24;
+      color: #111827;
+      font-weight: 600;
+    }
+    .pill {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #3730a3;
+      display: inline-block;
+      margin-left: 8px;
     }
     .grid {
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
+      margin-top: 12px;
     }
     .card {
       background: white;
       border-radius: 10px;
-      padding: 12px;
+      padding: 10px;
       box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
-      flex: 1 1 320px;
+      flex: 1 1 340px;
     }
     h2 {
       font-size: 16px;
@@ -68,10 +99,10 @@
     button {
       border: none;
       border-radius: 999px;
-      padding: 8px 14px;
+      padding: 7px 13px;
       font-size: 13px;
       cursor: pointer;
-      margin-top: 8px;
+      margin-top: 6px;
     }
     .btn-primary {
       background: #111827;
@@ -126,32 +157,25 @@
     .filter-row select {
       max-width: 180px;
     }
-    .pill {
-      font-size: 11px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: #eef2ff;
-      color: #3730a3;
-      display: inline-block;
-      margin-left: auto;
-    }
-    .top-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
     .text-sm {
       font-size: 12px;
-      color: #d1d5db;
+      color: #9ca3af;
     }
     .text-sm-dark {
       font-size: 12px;
-      color: #6b7280;
+      color: #4b5563;
     }
     .env-warning {
       font-size: 11px;
       color: #b91c1c;
       margin-top: 4px;
+    }
+    .status-pill {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #ecfeff;
+      color: #0e7490;
     }
     .qty-pill {
       font-size: 11px;
@@ -164,150 +188,308 @@
       background: #fef2f2;
       color: #b91c1c;
     }
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
 <header>
   <div class="container">
-    <div class="top-row">
-      <h1>Paint Inventory – E Collision (Cloud)</h1>
-      <span class="pill" id="totalCountPill">0 Items</span>
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <h1>E Collision – Jobs & Paint (Cloud)</h1>
+      <div class="text-sm">Shared across iPhones via Supabase</div>
     </div>
-    <div class="text-sm">Shared across phones. Requires Supabase URL + anon key configured in the code.</div>
+    <div class="tabs">
+      <button class="tab-btn active" id="tabJobsBtn" onclick="showTab('jobs')">
+        Jobs
+        <span class="pill" id="jobsCountPill">0</span>
+      </button>
+      <button class="tab-btn" id="tabPaintBtn" onclick="showTab('paint')">
+        Paint
+        <span class="pill" id="paintCountPill">0</span>
+      </button>
+    </div>
   </div>
 </header>
 
 <div class="container">
-  <div class="grid">
-    <!-- New / Edit Paint -->
-    <div class="card">
-      <h2>New / Edit Paint</h2>
-      <div class="env-warning" id="envWarning"></div>
+  <!-- ===== JOBS TAB ===== -->
+  <div id="jobsTab">
+    <div class="grid">
+      <div class="card">
+        <h2>Collision Job Sheet</h2>
+        <div class="env-warning" id="jobsEnvWarning"></div>
 
-      <div class="row">
-        <div class="col-2">
-          <label for="brand">Brand</label>
-          <input id="brand" placeholder="PPG / BASF / Sherwin" />
+        <div class="row">
+          <div class="col-2">
+            <label for="job_vin">VIN</label>
+            <input id="job_vin" placeholder="Scan or type VIN" />
+          </div>
+          <div class="col-2">
+            <label for="job_ro">RO #</label>
+            <input id="job_ro" placeholder="Repair Order #" />
+          </div>
         </div>
-        <div class="col-2">
-          <label for="paint_code">Paint Code</label>
-          <input id="paint_code" placeholder="e.g. WA8624 / k3g" />
+
+        <div class="row">
+          <div class="col-2">
+            <label for="job_customer">Customer</label>
+            <input id="job_customer" placeholder="Customer name" />
+          </div>
+          <div class="col-2">
+            <label for="job_assigned">Assigned To</label>
+            <input id="job_assigned" placeholder="Tech (Alex / Ivan / Danny)" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-3">
+            <label for="job_year">Year</label>
+            <input id="job_year" placeholder="2020" />
+          </div>
+          <div class="col-3">
+            <label for="job_make">Make</label>
+            <input id="job_make" placeholder="Honda / Toyota / GM" />
+          </div>
+          <div class="col-3">
+            <label for="job_model">Model</label>
+            <input id="job_model" placeholder="Civic / RAV4" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-2">
+            <label for="job_color">Color</label>
+            <input id="job_color" placeholder="White / Black / Silver" />
+          </div>
+          <div class="col-2">
+            <label for="job_work_type">Work Type</label>
+            <input id="job_work_type" placeholder="Body / Paint / Blend / Frame" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-2">
+            <label for="job_status">Status</label>
+            <select id="job_status">
+              <option value="Intake">Intake</option>
+              <option value="In Body">In Body</option>
+              <option value="In Paint">In Paint</option>
+              <option value="Buff / Detail">Buff / Detail</option>
+              <option value="Ready for Delivery">Ready for Delivery</option>
+              <option value="Delivered">Delivered</option>
+            </select>
+          </div>
+          <div class="col-2">
+            <label for="job_check_in">Check In</label>
+            <input id="job_check_in" type="date" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-2">
+            <label for="job_due">Due Date</label>
+            <input id="job_due" type="date" />
+          </div>
+          <div class="col-2"></div>
+        </div>
+
+        <label for="job_notes">Job Notes</label>
+        <textarea id="job_notes" placeholder="Damage areas, insurance, deductible, etc."></textarea>
+
+        <div class="row" style="margin-top:6px;">
+          <button class="btn-primary" type="button" onclick="saveJob()">Save Job</button>
+          <button class="btn-secondary" type="button" onclick="clearJobForm()">Clear</button>
+          <button class="btn-secondary" type="button" onclick="triggerVinCapture()">Scan VIN</button>
+          <button class="btn-danger" type="button" id="jobDeleteBtn" onclick="deleteJob()" style="display:none;">Delete</button>
+        </div>
+
+        <!-- Hidden VIN file input + canvas for jsQR -->
+        <input
+          id="vinImageInput"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          style="display:none"
+        />
+        <canvas id="vinCanvas" class="hidden"></canvas>
+
+        <div class="text-sm-dark" id="jobsHint" style="margin-top:6px;">
+          New job – VIN + RO recommended.
         </div>
       </div>
 
-      <div class="row">
-        <div class="col-2">
-          <label for="color_name">Color Name</label>
-          <input id="color_name" placeholder="White Diamond, etc." />
+      <div class="card">
+        <h2>Jobs List</h2>
+        <div class="filter-row">
+          <div>
+            <label for="jobFilterSearch" style="margin-top:0;">Search</label>
+            <input id="jobFilterSearch" placeholder="VIN, customer, RO, make..." oninput="renderJobs()" />
+          </div>
+          <div>
+            <label for="jobFilterStatus" style="margin-top:0;">Status</label>
+            <select id="jobFilterStatus" onchange="renderJobs()">
+              <option value="All">All</option>
+              <option value="Intake">Intake</option>
+              <option value="In Body">In Body</option>
+              <option value="In Paint">In Paint</option>
+              <option value="Buff / Detail">Buff / Detail</option>
+              <option value="Ready for Delivery">Ready for Delivery</option>
+              <option value="Delivered">Delivered</option>
+            </select>
+          </div>
         </div>
-        <div class="col-2">
-          <label for="size">Size</label>
-          <select id="size">
-            <option value="Quart">Quart</option>
-            <option value="Gallon">Gallon</option>
-            <option value="Half Gallon">Half Gallon</option>
-            <option value="Pint">Pint</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="col-2">
-          <label for="quantity">Quantity in Stock</label>
-          <input id="quantity" type="number" step="0.01" placeholder="e.g. 1, 2.5" />
-        </div>
-        <div class="col-2">
-          <label for="cost">Cost (per unit)</label>
-          <input id="cost" type="number" step="0.01" placeholder="e.g. 120.00" />
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="col-2">
-          <label for="supplier">Supplier</label>
-          <input id="supplier" placeholder="Jobber / Vendor" />
-        </div>
-        <div class="col-2">
-          <label for="invoice_number">Invoice #</label>
-          <input id="invoice_number" placeholder="e.g. 1807583" />
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="col-2">
-          <label for="received_date">Received Date</label>
-          <input id="received_date" type="date" />
-        </div>
-        <div class="col-2"></div>
-      </div>
-
-      <label for="notes">Notes</label>
-      <textarea id="notes" placeholder="GM/CHEV | WA8624 | WHITE 85-26 | 0.5 Pint"></textarea>
-
-      <div class="row" style="margin-top:8px;">
-        <button class="btn-primary" type="button" onclick="savePaint()">Save Paint</button>
-        <button class="btn-secondary" type="button" onclick="clearForm()">Clear Form</button>
-        <button class="btn-secondary" type="button" onclick="triggerInvoiceCapture()">Scan Invoice (OCR)</button>
-        <button class="btn-danger" type="button" onclick="deletePaint()" id="deleteBtn" style="display:none;">Delete</button>
-      </div>
-
-      <!-- Hidden camera/file input for OCR -->
-      <input
-        id="invoiceImageInput"
-        type="file"
-        accept="image/*"
-        capture="environment"
-        style="display:none"
-      />
-
-      <div class="text-sm-dark" id="formHint" style="margin-top:6px;">
-        New item – brand + paint code recommended.
+        <table>
+          <thead>
+            <tr>
+              <th>VIN</th>
+              <th>Customer</th>
+              <th>Vehicle</th>
+              <th>Status</th>
+              <th>Due</th>
+            </tr>
+          </thead>
+          <tbody id="jobsBody"></tbody>
+        </table>
       </div>
     </div>
+  </div>
 
-    <!-- Inventory List -->
-    <div class="card">
-      <h2>Inventory</h2>
-      <div class="filter-row">
-        <div>
-          <label for="filterBrand" style="margin-top:0;">Brand</label>
-          <input id="filterBrand" placeholder="PPG, BASF..." oninput="renderPaints()" />
+  <!-- ===== PAINT TAB ===== -->
+  <div id="paintTab" style="display:none;">
+    <div class="grid">
+      <!-- New / Edit Paint -->
+      <div class="card">
+        <h2>Paint Inventory Item</h2>
+        <div class="env-warning" id="paintEnvWarning"></div>
+
+        <div class="row">
+          <div class="col-2">
+            <label for="brand">Brand</label>
+            <input id="brand" placeholder="PPG / BASF / Sherwin / MIPA" />
+          </div>
+          <div class="col-2">
+            <label for="paint_code">Paint Code</label>
+            <input id="paint_code" placeholder="e.g. WA8624 / k3g" />
+          </div>
         </div>
-        <div>
-          <label for="filterSearch" style="margin-top:0;">Search</label>
-          <input id="filterSearch" placeholder="Code, color, notes..." oninput="renderPaints()" />
+
+        <div class="row">
+          <div class="col-2">
+            <label for="color_name">Color Name</label>
+            <input id="color_name" placeholder="White Diamond, etc." />
+          </div>
+          <div class="col-2">
+            <label for="size">Size</label>
+            <select id="size">
+              <option value="Quart">Quart</option>
+              <option value="Gallon">Gallon</option>
+              <option value="Half Gallon">Half Gallon</option>
+              <option value="Pint">Pint</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label for="filterLow" style="margin-top:0;">Low stock</label>
-          <select id="filterLow" onchange="renderPaints()">
-            <option value="All">All</option>
-            <option value="LowOnly">&lt;= 0.5</option>
-          </select>
+
+        <div class="row">
+          <div class="col-2">
+            <label for="quantity">Quantity in Stock</label>
+            <input id="quantity" type="number" step="0.01" placeholder="e.g. 1, 2.5" />
+          </div>
+          <div class="col-2">
+            <label for="cost">Cost (per unit)</label>
+            <input id="cost" type="number" step="0.01" placeholder="e.g. 120.00" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-2">
+            <label for="supplier">Supplier</label>
+            <input id="supplier" placeholder="Paint My Ride, etc." />
+          </div>
+          <div class="col-2">
+            <label for="invoice_number">Invoice #</label>
+            <input id="invoice_number" placeholder="e.g. 1807583" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-2">
+            <label for="received_date">Received Date</label>
+            <input id="received_date" type="date" />
+          </div>
+          <div class="col-2"></div>
+        </div>
+
+        <label for="notes">Notes</label>
+        <textarea id="notes" placeholder="GM/CHEV | WA8624 | WHITE 85-26 | 0.5 Pint"></textarea>
+
+        <div class="row" style="margin-top:6px;">
+          <button class="btn-primary" type="button" onclick="savePaint()">Save Paint</button>
+          <button class="btn-secondary" type="button" onclick="clearPaintForm()">Clear</button>
+          <button class="btn-secondary" type="button" onclick="triggerInvoiceCapture()">Scan Invoice (OCR)</button>
+          <button class="btn-danger" type="button" onclick="deletePaint()" id="deletePaintBtn" style="display:none;">Delete</button>
+        </div>
+
+        <!-- Hidden camera/file input for OCR -->
+        <input
+          id="invoiceImageInput"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          style="display:none"
+        />
+
+        <div class="text-sm-dark" id="paintHint" style="margin-top:6px;">
+          New paint – brand + paint code recommended.
         </div>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Brand</th>
-            <th>Code</th>
-            <th>Color</th>
-            <th>Size</th>
-            <th>Qty</th>
-            <th>Invoice</th>
-          </tr>
-        </thead>
-        <tbody id="paintBody"></tbody>
-      </table>
+
+      <!-- Inventory List -->
+      <div class="card">
+        <h2>Paint Inventory</h2>
+        <div class="filter-row">
+          <div>
+            <label for="filterBrand" style="margin-top:0;">Brand</label>
+            <input id="filterBrand" placeholder="PPG, BASF..." oninput="renderPaints()" />
+          </div>
+          <div>
+            <label for="filterSearch" style="margin-top:0;">Search</label>
+            <input id="filterSearch" placeholder="Code, color, notes..." oninput="renderPaints()" />
+          </div>
+          <div>
+            <label for="filterLow" style="margin-top:0;">Low stock</label>
+            <select id="filterLow" onchange="renderPaints()">
+              <option value="All">All</option>
+              <option value="LowOnly">&lt;= 0.5</option>
+            </select>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Brand</th>
+              <th>Code</th>
+              <th>Color</th>
+              <th>Size</th>
+              <th>Qty</th>
+              <th>Invoice</th>
+            </tr>
+          </thead>
+          <tbody id="paintBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
   // ====== SUPABASE CONFIG – CHANGE THESE ======
-  const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co"; // TODO: change this
-  const SUPABASE_KEY = "YOUR_ANON_PUBLIC_KEY";             // TODO: change this
-  const TABLE = "paint_inventory";
+  const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co"; // TODO: change
+  const SUPABASE_KEY = "YOUR_ANON_PUBLIC_KEY";             // TODO: change
+  const JOBS_TABLE = "jobs";
+  const PAINT_TABLE = "paint_inventory";
 
   function supabaseConfigured() {
     return !SUPABASE_URL.includes("YOUR-PROJECT") && SUPABASE_KEY !== "YOUR_ANON_PUBLIC_KEY";
@@ -331,68 +513,301 @@
     return await res.json();
   }
 
-  async function loadPaintsFromCloud() {
-    const url = SUPABASE_URL + "/rest/v1/" + TABLE + "?select=*";
+  // ===== JOBS (Cloud) =====
+  let JOBS = [];
+
+  async function loadJobs() {
+    const url = SUPABASE_URL + "/rest/v1/" + JOBS_TABLE + "?select=*";
     return await fetchJSON(url, { method: "GET" });
   }
 
-  async function upsertPaintToCloud(item) {
-    const url = SUPABASE_URL + "/rest/v1/" + TABLE;
+  async function upsertJob(job) {
+    const url = SUPABASE_URL + "/rest/v1/" + JOBS_TABLE;
     return await fetchJSON(url, {
       method: "POST",
-      body: JSON.stringify([item]),
+      body: JSON.stringify([job]),
+      headers: { "Prefer": "resolution=merge-duplicates,return=representation" }
+    });
+  }
+
+  async function deleteJobFromCloud(id) {
+    const url = SUPABASE_URL + "/rest/v1/" + JOBS_TABLE + "?id=eq." + encodeURIComponent(id);
+    return await fetchJSON(url, { method: "DELETE" });
+  }
+
+  async function refreshJobs() {
+    try {
+      JOBS = await loadJobs();
+      renderJobs();
+      const el = document.getElementById("jobsHint");
+      if (el) el.textContent = "Loaded jobs from cloud.";
+    } catch (e) {
+      console.error(e);
+      const el = document.getElementById("jobsHint");
+      if (el) el.textContent = "Could not load jobs. Check Supabase config.";
+    }
+  }
+
+  function clearJobForm() {
+    const ids = [
+      "job_vin","job_ro","job_customer","job_assigned",
+      "job_year","job_make","job_model","job_color",
+      "job_work_type","job_status","job_check_in","job_due","job_notes"
+    ];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (id === "job_status") el.value = "Intake";
+      else el.value = "";
+    });
+    const hint = document.getElementById("jobsHint");
+    if (hint) hint.textContent = "New job – VIN + RO recommended.";
+    const delBtn = document.getElementById("jobDeleteBtn");
+    if (delBtn) delBtn.style.display = "none";
+  }
+
+  function findExistingJob(vin, ro) {
+    return JOBS.find(j =>
+      (j.vin || "").toLowerCase() === vin.toLowerCase() &&
+      (j.ro || "").toLowerCase() === ro.toLowerCase()
+    );
+  }
+
+  async function saveJob() {
+    const vin = (document.getElementById("job_vin")?.value || "").trim();
+    const ro = (document.getElementById("job_ro")?.value || "").trim();
+
+    if (!vin && !ro) {
+      alert("At least VIN or RO # is required.");
+      return;
+    }
+
+    const existing = findExistingJob(vin, ro);
+    const job = {
+      id: existing ? existing.id : undefined,
+      vin,
+      ro,
+      customer: (document.getElementById("job_customer")?.value || "").trim(),
+      year: (document.getElementById("job_year")?.value || "").trim(),
+      make: (document.getElementById("job_make")?.value || "").trim(),
+      model: (document.getElementById("job_model")?.value || "").trim(),
+      color: (document.getElementById("job_color")?.value || "").trim(),
+      work_type: (document.getElementById("job_work_type")?.value || "").trim(),
+      status: document.getElementById("job_status")?.value || "Intake",
+      assigned: (document.getElementById("job_assigned")?.value || "").trim(),
+      check_in: document.getElementById("job_check_in")?.value || null,
+      due: document.getElementById("job_due")?.value || null,
+      notes: (document.getElementById("job_notes")?.value || "").trim(),
+      updated_at: new Date().toISOString()
+    };
+
+    try {
+      const res = await upsertJob(job);
+      const saved = res[0];
+      const idx = JOBS.findIndex(j => j.id === saved.id);
+      if (idx >= 0) JOBS[idx] = saved; else JOBS.push(saved);
+      const hint = document.getElementById("jobsHint");
+      if (hint) hint.textContent = "Job saved to cloud.";
+      const delBtn = document.getElementById("jobDeleteBtn");
+      if (delBtn) delBtn.style.display = "inline-block";
+      renderJobs();
+    } catch (e) {
+      console.error(e);
+      alert("Error saving job: " + e.message);
+    }
+  }
+
+  async function deleteJob() {
+    const vin = (document.getElementById("job_vin")?.value || "").trim();
+    const ro = (document.getElementById("job_ro")?.value || "").trim();
+    const existing = findExistingJob(vin, ro);
+    if (!existing) {
+      alert("No matching job found to delete.");
+      return;
+    }
+    if (!confirm("Delete this job from cloud?")) return;
+    try {
+      await deleteJobFromCloud(existing.id);
+      JOBS = JOBS.filter(j => j.id !== existing.id);
+      clearJobForm();
+      renderJobs();
+    } catch (e) {
+      console.error(e);
+      alert("Error deleting job: " + e.message);
+    }
+  }
+
+  function loadJobIntoForm(id) {
+    const j = JOBS.find(x => x.id === id);
+    if (!j) return;
+    const setVal = (id, v) => {
+      const el = document.getElementById(id);
+      if (el) el.value = v ?? "";
+    };
+    setVal("job_vin", j.vin || "");
+    setVal("job_ro", j.ro || "");
+    setVal("job_customer", j.customer || "");
+    setVal("job_assigned", j.assigned || "");
+    setVal("job_year", j.year || "");
+    setVal("job_make", j.make || "");
+    setVal("job_model", j.model || "");
+    setVal("job_color", j.color || "");
+    setVal("job_work_type", j.work_type || "");
+    setVal("job_status", j.status || "Intake");
+    setVal("job_check_in", j.check_in || "");
+    setVal("job_due", j.due || "");
+    setVal("job_notes", j.notes || "");
+    const hint = document.getElementById("jobsHint");
+    if (hint) hint.textContent = "Editing existing job (cloud).";
+    const delBtn = document.getElementById("jobDeleteBtn");
+    if (delBtn) delBtn.style.display = "inline-block";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function renderJobs() {
+    const body = document.getElementById("jobsBody");
+    if (!body) return;
+    body.innerHTML = "";
+
+    const filterText = (document.getElementById("jobFilterSearch")?.value || "").trim().toLowerCase();
+    const filterStatus = document.getElementById("jobFilterStatus")?.value || "All";
+
+    let filtered = JOBS.slice();
+
+    if (filterText) {
+      filtered = filtered.filter(j =>
+        (j.vin || "").toLowerCase().includes(filterText) ||
+        (j.ro || "").toLowerCase().includes(filterText) ||
+        (j.customer || "").toLowerCase().includes(filterText) ||
+        (j.make || "").toLowerCase().includes(filterText) ||
+        (j.model || "").toLowerCase().includes(filterText)
+      );
+    }
+
+    if (filterStatus !== "All") {
+      filtered = filtered.filter(j => (j.status || "") === filterStatus);
+    }
+
+    filtered.sort((a, b) => {
+      const da = a.check_in || "";
+      const db = b.check_in || "";
+      if (da < db) return 1;
+      if (da > db) return -1;
+      return 0;
+    });
+
+    filtered.forEach(j => {
+      const tr = document.createElement("tr");
+      const vehicle = [j.year, j.make, j.model].filter(Boolean).join(" ");
+      tr.innerHTML = `
+        <td><button class="btn-secondary" type="button" onclick="loadJobIntoForm('${j.id}')">${j.vin || "-"}</button></td>
+        <td>${j.customer || "-"}</td>
+        <td>${vehicle || "-"}</td>
+        <td><span class="status-pill">${j.status || "-"}</span></td>
+        <td>${j.due || "-"}</td>
+      `;
+      body.appendChild(tr);
+    });
+
+    const pill = document.getElementById("jobsCountPill");
+    if (pill) pill.textContent = JOBS.length;
+  }
+
+  // ===== VIN SCAN (jsQR on photo of barcode) =====
+  function triggerVinCapture() {
+    const input = document.getElementById("vinImageInput");
+    if (!input) {
+      alert("VIN camera input not found.");
+      return;
+    }
+    input.value = "";
+    input.onchange = handleVinImageSelected;
+    input.click();
+  }
+
+  function handleVinImageSelected(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.getElementById("vinCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, canvas.width, canvas.height);
+        if (code && code.data) {
+          document.getElementById("job_vin").value = code.data.trim();
+          const hint = document.getElementById("jobsHint");
+          if (hint) hint.textContent = "VIN scanned from barcode. Review & Save.";
+        } else {
+          alert("Could not read VIN barcode. Try again closer and steady.");
+        }
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ===== PAINT (Cloud) =====
+  let PAINTS = [];
+
+  async function loadPaints() {
+    const url = SUPABASE_URL + "/rest/v1/" + PAINT_TABLE + "?select=*";
+    return await fetchJSON(url, { method: "GET" });
+  }
+
+  async function upsertPaint(p) {
+    const url = SUPABASE_URL + "/rest/v1/" + PAINT_TABLE;
+    return await fetchJSON(url, {
+      method: "POST",
+      body: JSON.stringify([p]),
       headers: { "Prefer": "resolution=merge-duplicates,return=representation" }
     });
   }
 
   async function deletePaintFromCloud(id) {
-    const url = SUPABASE_URL + "/rest/v1/" + TABLE + "?id=eq." + encodeURIComponent(id);
+    const url = SUPABASE_URL + "/rest/v1/" + PAINT_TABLE + "?id=eq." + encodeURIComponent(id);
     return await fetchJSON(url, { method: "DELETE" });
   }
 
-  let PAINTS = [];
-
   async function refreshPaints() {
     try {
-      PAINTS = await loadPaintsFromCloud();
+      PAINTS = await loadPaints();
       renderPaints();
-      const hintEl = document.getElementById("formHint");
-      if (hintEl) hintEl.textContent = "Loaded from cloud.";
+      const hint = document.getElementById("paintHint");
+      if (hint) hint.textContent = "Loaded paint from cloud.";
     } catch (e) {
       console.error(e);
-      const hintEl = document.getElementById("formHint");
-      if (hintEl) hintEl.textContent = "Could not load from cloud. Check Supabase config.";
+      const hint = document.getElementById("paintHint");
+      if (hint) hint.textContent = "Could not load paint. Check Supabase config.";
     }
   }
 
-  function clearForm() {
+  function clearPaintForm() {
     const ids = [
-      "brand",
-      "paint_code",
-      "color_name",
-      "size",
-      "quantity",
-      "cost",
-      "supplier",
-      "invoice_number",
-      "received_date",
-      "notes"
+      "brand","paint_code","color_name","size","quantity","cost",
+      "supplier","invoice_number","received_date","notes"
     ];
-    ids.forEach((id) => {
+    ids.forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
-      if (id === "size") el.value = "Quart";
-      else el.value = "";
+      if (id === "size") el.value = "Quart"; else el.value = "";
     });
-    const hintEl = document.getElementById("formHint");
-    if (hintEl) hintEl.textContent = "New item – brand + paint code recommended.";
-    const delBtn = document.getElementById("deleteBtn");
+    const hint = document.getElementById("paintHint");
+    if (hint) hint.textContent = "New paint – brand + paint code recommended.";
+    const delBtn = document.getElementById("deletePaintBtn");
     if (delBtn) delBtn.style.display = "none";
   }
 
   function findExistingPaint(brand, code, size) {
     return PAINTS.find(
-      (p) =>
+      p =>
         (p.brand || "").toLowerCase() === brand.toLowerCase() &&
         (p.paint_code || "").toLowerCase() === code.toLowerCase() &&
         (p.size || "").toLowerCase() === size.toLowerCase()
@@ -431,17 +846,13 @@
     };
 
     try {
-      const res = await upsertPaintToCloud(item);
+      const res = await upsertPaint(item);
       const saved = res[0];
-      const idx = PAINTS.findIndex((p) => p.id === saved.id);
-      if (idx >= 0) {
-        PAINTS[idx] = saved;
-      } else {
-        PAINTS.push(saved);
-      }
-      const hintEl = document.getElementById("formHint");
-      if (hintEl) hintEl.textContent = "Saved to cloud.";
-      const delBtn = document.getElementById("deleteBtn");
+      const idx = PAINTS.findIndex(p => p.id === saved.id);
+      if (idx >= 0) PAINTS[idx] = saved; else PAINTS.push(saved);
+      const hint = document.getElementById("paintHint");
+      if (hint) hint.textContent = "Paint saved to cloud.";
+      const delBtn = document.getElementById("deletePaintBtn");
       if (delBtn) delBtn.style.display = "inline-block";
       renderPaints();
     } catch (e) {
@@ -464,8 +875,8 @@
 
     try {
       await deletePaintFromCloud(existing.id);
-      PAINTS = PAINTS.filter((p) => p.id !== existing.id);
-      clearForm();
+      PAINTS = PAINTS.filter(p => p.id !== existing.id);
+      clearPaintForm();
       renderPaints();
     } catch (e) {
       console.error(e);
@@ -474,7 +885,7 @@
   }
 
   function loadPaintIntoForm(id) {
-    const p = PAINTS.find((x) => x.id === id);
+    const p = PAINTS.find(x => x.id === id);
     if (!p) return;
     const setVal = (id, v) => {
       const el = document.getElementById(id);
@@ -490,9 +901,9 @@
     setVal("invoice_number", p.invoice_number || "");
     setVal("received_date", p.received_date || "");
     setVal("notes", p.notes || "");
-    const hintEl = document.getElementById("formHint");
-    if (hintEl) hintEl.textContent = "Editing existing paint item (cloud).";
-    const delBtn = document.getElementById("deleteBtn");
+    const hint = document.getElementById("paintHint");
+    if (hint) hint.textContent = "Editing existing paint item (cloud).";
+    const delBtn = document.getElementById("deletePaintBtn");
     if (delBtn) delBtn.style.display = "inline-block";
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -500,28 +911,27 @@
   function renderPaints() {
     const body = document.getElementById("paintBody");
     if (!body) return;
+    body.innerHTML = "";
 
     const filterBrand = (document.getElementById("filterBrand")?.value || "").trim().toLowerCase();
     const filterSearch = (document.getElementById("filterSearch")?.value || "").trim().toLowerCase();
     const filterLow = document.getElementById("filterLow")?.value || "All";
 
-    body.innerHTML = "";
-
     let filtered = PAINTS.slice();
 
     if (filterBrand) {
-      filtered = filtered.filter((p) => (p.brand || "").toLowerCase().includes(filterBrand));
+      filtered = filtered.filter(p => (p.brand || "").toLowerCase().includes(filterBrand));
     }
     if (filterSearch) {
       filtered = filtered.filter(
-        (p) =>
+        p =>
           (p.paint_code || "").toLowerCase().includes(filterSearch) ||
           (p.color_name || "").toLowerCase().includes(filterSearch) ||
           (p.notes || "").toLowerCase().includes(filterSearch)
       );
     }
     if (filterLow === "LowOnly") {
-      filtered = filtered.filter((p) => p.quantity != null && p.quantity <= 0.5);
+      filtered = filtered.filter(p => p.quantity != null && p.quantity <= 0.5);
     }
 
     filtered.sort((a, b) => {
@@ -536,7 +946,7 @@
       return 0;
     });
 
-    filtered.forEach((p) => {
+    filtered.forEach(p => {
       const low = p.quantity != null && p.quantity <= 0.5;
       const tr = document.createElement("tr");
       tr.innerHTML = `
@@ -550,25 +960,22 @@
       body.appendChild(tr);
     });
 
-    const pill = document.getElementById("totalCountPill");
-    if (pill) {
-      pill.textContent = PAINTS.length + " Item" + (PAINTS.length === 1 ? "" : "s");
-    }
+    const pill = document.getElementById("paintCountPill");
+    if (pill) pill.textContent = PAINTS.length;
   }
 
-  // ====== OCR CAMERA ? NETLIFY FUNCTION ======
+  // ===== Invoice OCR ? Netlify Function =====
   function triggerInvoiceCapture() {
     const input = document.getElementById("invoiceImageInput");
     if (!input) {
-      alert("Camera input not found in the page.");
+      alert("Camera input not found for invoice.");
       return;
     }
-    input.value = ""; // reset
+    input.value = "";
     input.onchange = handleInvoiceImageSelected;
     input.click();
   }
 
-  // Helper: extract paint code from notes (robust)
   function extractPaintCodeFromNotes(notes) {
     if (!notes) return null;
 
@@ -579,19 +986,16 @@
       "RED","BLUE","GREEN","GM","CHEV","CHEVY","GM/CHEV"
     ];
 
-    // 1) Look for WA codes first (WA8624)
     for (const line of lines) {
       const m = line.match(/WA\d{3,5}/i);
       if (m) return m[0].toUpperCase();
     }
 
-    // 2) Otherwise, look for short alphanumeric tokens (2–6 chars, with letters+digits)
     for (const line of lines) {
       const tokens = line
         .split(/[|\s]+/)
         .map(t => t.trim())
         .filter(Boolean);
-
       for (const tok of tokens) {
         const up = tok.toUpperCase();
         if (badWords.includes(up)) continue;
@@ -600,7 +1004,6 @@
         return up;
       }
     }
-
     return null;
   }
 
@@ -610,13 +1013,12 @@
 
     const reader = new FileReader();
     reader.onload = async () => {
-      const base64 = reader.result; // data:image/jpeg;base64,...
+      const base64 = reader.result;
 
       const setHint = (msg) => {
-        const hintEl = document.getElementById("formHint");
-        if (hintEl) hintEl.textContent = msg;
+        const el = document.getElementById("paintHint");
+        if (el) el.textContent = msg;
       };
-
       const setValueIfExists = (id, value) => {
         if (value == null) return;
         const el = document.getElementById(id);
@@ -624,7 +1026,7 @@
       };
 
       try {
-        setHint("Sending to OCR...");
+        setHint("Sending invoice to OCR...");
 
         const res = await fetch("/.netlify/functions/ocr-invoice", {
           method: "POST",
@@ -639,14 +1041,12 @@
 
         const data = await res.json();
 
-        // 1) Fill supplier / invoice / cost
         setValueIfExists("supplier", data.supplier);
         setValueIfExists("invoice_number", data.invoice_number);
         if (data.cost != null) {
           setValueIfExists("cost", data.cost);
         }
 
-        // 2) Fill notes (append if already has something)
         if (data.notes) {
           const notesEl = document.getElementById("notes");
           if (notesEl) {
@@ -658,7 +1058,6 @@
           }
         }
 
-        // 3) Auto-fill paint_code from notes using regex (WA codes or short codes)
         const notesText = data.notes || document.getElementById("notes")?.value || "";
         const foundCode = extractPaintCodeFromNotes(notesText);
         if (foundCode) {
@@ -676,18 +1075,45 @@
     reader.readAsDataURL(file);
   }
 
+  // ===== Tabs + Init =====
+  function showTab(tab) {
+    const jobsTab = document.getElementById("jobsTab");
+    const paintTab = document.getElementById("paintTab");
+    const jobsBtn = document.getElementById("tabJobsBtn");
+    const paintBtn = document.getElementById("tabPaintBtn");
+
+    if (tab === "jobs") {
+      jobsTab.style.display = "";
+      paintTab.style.display = "none";
+      jobsBtn.classList.add("active");
+      paintBtn.classList.remove("active");
+    } else {
+      jobsTab.style.display = "none";
+      paintTab.style.display = "";
+      paintBtn.classList.add("active");
+      jobsBtn.classList.remove("active");
+    }
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
+    const checkIn = document.getElementById("job_check_in");
+    if (checkIn && !checkIn.value) {
+      checkIn.valueAsDate = new Date();
+    }
     const received = document.getElementById("received_date");
     if (received && !received.value) {
       received.valueAsDate = new Date();
     }
-    const warningEl = document.getElementById("envWarning");
+
+    const jobsWarn = document.getElementById("jobsEnvWarning");
+    const paintWarn = document.getElementById("paintEnvWarning");
     if (!supabaseConfigured()) {
-      if (warningEl) {
-        warningEl.textContent = "Supabase not configured yet – edit index.html to set SUPABASE_URL and SUPABASE_KEY, then re-upload.";
-      }
+      if (jobsWarn) jobsWarn.textContent = "Supabase not configured – set URL & KEY in index.html.";
+      if (paintWarn) paintWarn.textContent = "Supabase not configured – set URL & KEY in index.html.";
     } else {
-      if (warningEl) warningEl.textContent = "";
+      if (jobsWarn) jobsWarn.textContent = "";
+      if (paintWarn) paintWarn.textContent = "";
+      refreshJobs();
       refreshPaints();
     }
   });
