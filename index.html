@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>E Collision – Jobs & Paint Inventory (Cloud)</title>
+  <title>E Collision – Jobs & Paint (Cloud)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#111827" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png" />
-  <!-- jsQR for VIN barcode scanning -->
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <!-- Quagga for live VIN barcode scanning -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
   <style>
     body {
       margin: 0;
@@ -301,19 +301,9 @@
         <div class="row" style="margin-top:6px;">
           <button class="btn-primary" type="button" onclick="saveJob()">Save Job</button>
           <button class="btn-secondary" type="button" onclick="clearJobForm()">Clear</button>
-          <button class="btn-secondary" type="button" onclick="triggerVinCapture()">Scan VIN</button>
+          <button class="btn-secondary" type="button" onclick="startVinScanner()">Scan VIN (Camera)</button>
           <button class="btn-danger" type="button" id="jobDeleteBtn" onclick="deleteJob()" style="display:none;">Delete</button>
         </div>
-
-        <!-- Hidden VIN file input + canvas for jsQR -->
-        <input
-          id="vinImageInput"
-          type="file"
-          accept="image/*"
-          capture="environment"
-          style="display:none"
-        />
-        <canvas id="vinCanvas" class="hidden"></canvas>
 
         <div class="text-sm-dark" id="jobsHint" style="margin-top:6px;">
           New job – VIN + RO recommended.
@@ -354,6 +344,27 @@
         </table>
       </div>
     </div>
+  </div>
+
+  <!-- VIN Live Scanner Overlay -->
+  <div id="vinScannerOverlay" class="hidden" style="
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+  ">
+    <div id="vinScanner" style="width: 90%; max-width: 500px; border: 2px solid #fbbf24; border-radius: 8px; overflow: hidden;"></div>
+    <div class="text-sm" style="margin-top:8px; text-align:center;">
+      Point the camera at the VIN barcode. Hold steady until it closes.
+    </div>
+    <button class="btn-secondary" type="button" onclick="stopVinScanner()" style="margin-top:10px;">
+      Cancel
+    </button>
   </div>
 
   <!-- ===== PAINT TAB ===== -->
@@ -713,45 +724,129 @@
     if (pill) pill.textContent = JOBS.length;
   }
 
-  // ===== VIN SCAN (jsQR on photo of barcode) =====
-  function triggerVinCapture() {
-    const input = document.getElementById("vinImageInput");
-    if (!input) {
-      alert("VIN camera input not found.");
-      return;
+  // ===== VIN DECODE HELPER (Netlify function decode-vin) =====
+  async function decodeVinAndFill(vin) {
+    try {
+      const hint = document.getElementById("jobsHint");
+      if (hint) hint.textContent = "Decoding VIN to get year/make/model...";
+
+      const res = await fetch("/.netlify/functions/decode-vin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vin })
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error("VIN decode error: " + txt);
+      }
+
+      const data = await res.json();
+
+      const setVal = (id, value) => {
+        if (!value) return;
+        const el = document.getElementById(id);
+        if (el) el.value = value;
+      };
+
+      setVal("job_year", data.year);
+      setVal("job_make", data.make);
+      setVal("job_model", data.model);
+
+      if (hint) hint.textContent = "VIN decoded. Check year/make/model and save job.";
+    } catch (e) {
+      console.error(e);
+      const hint = document.getElementById("jobsHint");
+      if (hint) hint.textContent = "VIN decode failed. Enter year/make/model manually.";
     }
-    input.value = "";
-    input.onchange = handleVinImageSelected;
-    input.click();
   }
 
-  function handleVinImageSelected(event) {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
+  // ===== VIN LIVE SCANNER (iPhone camera, Quagga) =====
+  let vinScannerRunning = false;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result;
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.getElementById("vinCanvas");
-        const ctx = canvas.getContext("2d");
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, canvas.width, canvas.height);
-        if (code && code.data) {
-          document.getElementById("job_vin").value = code.data.trim();
-          const hint = document.getElementById("jobsHint");
-          if (hint) hint.textContent = "VIN scanned from barcode. Review & Save.";
-        } else {
-          alert("Could not read VIN barcode. Try again closer and steady.");
+  function startVinScanner() {
+    const overlay = document.getElementById("vinScannerOverlay");
+    const target = document.getElementById("vinScanner");
+    if (!overlay || !target) {
+      alert("VIN scanner container not found.");
+      return;
+    }
+
+    overlay.classList.remove("hidden");
+
+    if (vinScannerRunning) {
+      return;
+    }
+
+    vinScannerRunning = true;
+
+    Quagga.init(
+      {
+        inputStream: {
+          name: "Live",
+          type: "LiveStream",
+          target: target,
+          constraints: {
+            facingMode: "environment"
+          }
+        },
+        decoder: {
+          readers: ["code_39_vin_reader", "code_39_reader", "code_128_reader"]
+        },
+        locate: true
+      },
+      function (err) {
+        if (err) {
+          console.error(err);
+          alert("Could not start VIN scanner: " + err.message);
+          vinScannerRunning = false;
+          overlay.classList.add("hidden");
+          return;
         }
-      };
-      img.src = dataUrl;
-    };
-    reader.readAsDataURL(file);
+        Quagga.start();
+        const hint = document.getElementById("jobsHint");
+        if (hint) hint.textContent = "Scanning VIN... hold camera steady.";
+      }
+    );
+
+    Quagga.offDetected();
+    Quagga.onDetected(function (data) {
+      if (!data || !data.codeResult || !data.codeResult.code) return;
+
+      const raw = data.codeResult.code.trim();
+      const vin = raw.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+
+      if (vin.length === 17) {
+        stopVinScanner();
+
+        const vinInput = document.getElementById("job_vin");
+        if (vinInput) vinInput.value = vin;
+
+        const hint = document.getElementById("jobsHint");
+        if (hint) hint.textContent = "VIN scanned. Decoding vehicle info...";
+
+        if (typeof decodeVinAndFill === "function") {
+          decodeVinAndFill(vin);
+        }
+      } else {
+        console.log("Scanned code not valid VIN:", raw);
+      }
+    });
+  }
+
+  function stopVinScanner() {
+    const overlay = document.getElementById("vinScannerOverlay");
+    if (overlay) overlay.classList.add("hidden");
+
+    if (vinScannerRunning) {
+      try {
+        Quagga.stop();
+      } catch (e) {
+        console.warn("Quagga stop error:", e);
+      }
+      Quagga.offDetected();
+      vinScannerRunning = false;
+    }
   }
 
   // ===== PAINT (Cloud) =====
@@ -964,7 +1059,7 @@
     if (pill) pill.textContent = PAINTS.length;
   }
 
-  // ===== Invoice OCR ? Netlify Function =====
+  // ===== Invoice OCR helpers =====
   function triggerInvoiceCapture() {
     const input = document.getElementById("invoiceImageInput");
     if (!input) {
