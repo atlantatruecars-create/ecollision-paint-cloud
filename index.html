@@ -10,29 +10,132 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 
   <style>
-    body { font-family: system-ui; background:#f3f4f6; margin:0; }
-    header { background:#111827; color:white; padding:12px; }
-    h1 { font-size:18px; margin:0; }
-    .container { max-width:900px; margin:auto; padding:12px; }
-    .card { background:white; padding:12px; border-radius:10px; box-shadow:0 2px 4px rgba(0,0,0,.1); margin-bottom:12px; }
-    label { font-size:12px; color:#555; display:block; margin-top:6px; }
-    input, select, textarea { width:100%; padding:7px; border-radius:6px; border:1px solid #ccc; }
-    textarea { min-height:60px; }
-    .row { display:flex; gap:8px; flex-wrap:wrap; }
-    .col { flex:1; min-width:140px; }
-    button { border:none; padding:8px 14px; border-radius:999px; cursor:pointer; }
-    .btn-primary { background:#111827; color:white; }
-    .btn-secondary { background:#e5e7eb; }
-    .btn-danger { background:#b91c1c; color:white; }
-    .hint { font-size:12px; color:#555; margin-top:6px; }
-
-    /* VIN Scanner Overlay */
-    #vinScannerOverlay {
-      position:fixed; inset:0; background:rgba(0,0,0,.85);
-      display:none; z-index:100; align-items:center; justify-content:center;
-      flex-direction:column; color:white;
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f3f4f6;
+      margin: 0;
+      color: #111827;
     }
-    #vinScanner { width:90%; max-width:480px; border:2px solid #fbbf24; border-radius:8px; }
+    header {
+      background: #111827;
+      color: white;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 18px;
+      margin: 0;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      padding: 12px;
+    }
+    .card {
+      background: white;
+      padding: 12px;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 12px;
+    }
+    h2 {
+      margin: 0 0 6px;
+      font-size: 16px;
+    }
+    label {
+      font-size: 12px;
+      color: #4b5563;
+      display: block;
+      margin-top: 6px;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 7px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      box-sizing: border-box;
+      font-size: 13px;
+    }
+    textarea {
+      min-height: 60px;
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .col {
+      flex: 1;
+      min-width: 140px;
+    }
+    button {
+      border: none;
+      padding: 8px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .btn-primary {
+      background: #111827;
+      color: white;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .btn-danger {
+      background: #b91c1c;
+      color: white;
+    }
+    .hint {
+      font-size: 12px;
+      color: #4b5563;
+      margin-top: 6px;
+    }
+
+    /* VIN Scanner Overlay (fixed, but camera only in the yellow box) */
+    #vinScannerOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.9);
+      display: none;          /* toggled in JS */
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      color: white;
+      text-align: center;
+      padding: 12px;
+    }
+    #vinScannerBox {
+      width: 90%;
+      max-width: 500px;
+      height: 260px;          /* fixed height so it’s not “all over” */
+      border: 2px solid #fbbf24;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 10px;
+      position: relative;
+      background: black;
+    }
+    #vinScanner {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    /* Make sure video/canvas fit inside the box, not full screen */
+    #vinScanner video,
+    #vinScanner canvas {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    #vinScannerOverlay p {
+      font-size: 13px;
+      margin: 4px 0;
+    }
   </style>
 </head>
 
@@ -42,7 +145,6 @@
 </header>
 
 <div class="container">
-
   <!-- JOB FORM -->
   <div class="card">
     <h2>New / Edit Job</h2>
@@ -82,23 +184,26 @@
     <label>Notes</label>
     <textarea id="job_notes"></textarea>
 
-    <div class="row" style="margin-top:10px;">
-      <button class="btn-primary" onclick="saveJob()">Save Job</button>
-      <button class="btn-secondary" onclick="startVinScanner()">Scan VIN (Camera)</button>
-      <button class="btn-secondary" onclick="decodeVinFromInput()">Decode VIN (Manual)</button>
+    <div class="row" style="margin-top:10px; gap:8px;">
+      <button class="btn-primary" type="button" onclick="saveJob()">Save Job</button>
+      <button class="btn-secondary" type="button" onclick="startVinScanner()">Scan VIN (Camera)</button>
+      <button class="btn-secondary" type="button" onclick="decodeVinFromInput()">Decode VIN (Manual)</button>
     </div>
 
     <div class="hint" id="jobsHint">
-      Scan VIN from door sticker barcode. If scan fails, type VIN and tap “Decode VIN (Manual)”.
+      Use the long VIN barcode on the driver door jamb. If scan doesn’t work, type VIN and tap “Decode VIN (Manual)”.
     </div>
   </div>
 </div>
 
 <!-- VIN SCANNER OVERLAY -->
 <div id="vinScannerOverlay">
-  <div id="vinScanner"></div>
-  <p>Align VIN barcode in the box</p>
-  <button class="btn-secondary" onclick="stopVinScanner()">Cancel</button>
+  <div id="vinScannerBox">
+    <div id="vinScanner"></div>
+  </div>
+  <p>Align the VIN barcode inside the yellow box and hold steady.</p>
+  <p style="font-size:11px; opacity:.8;">Works with long 1D barcodes (not square QR/DataMatrix codes).</p>
+  <button class="btn-secondary" type="button" onclick="stopVinScanner()">Cancel</button>
 </div>
 
 <script>
@@ -107,62 +212,95 @@ const SUPABASE_URL = "https://xmbochwqaeakijotbcof.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtYm9jaHdxYWVha2lqb3RiY29mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjI5MTIsImV4cCI6MjA4NDU5ODkxMn0.YoxRzHEDrM9pDNEOL7mLaJewzcGB3jbZ-rc4IkR1hmQ";
 const JOBS_TABLE = "jobs";
 
+
 /* =============== HELPERS ================= */
-async function supabaseFetch(url, options={}) {
-  options.headers = {
-    "apikey": SUPABASE_KEY,
-    "Authorization": "Bearer " + SUPABASE_KEY,
-    "Content-Type": "application/json"
-  };
+async function supabaseFetch(url, options = {}) {
+  const headers = options.headers || {};
+  headers["apikey"] = SUPABASE_KEY;
+  headers["Authorization"] = "Bearer " + SUPABASE_KEY;
+  headers["Content-Type"] = "application/json";
+  options.headers = headers;
+
   const res = await fetch(url, options);
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error("Supabase error " + res.status + ": " + txt);
+  }
   return res.json();
 }
 
 /* =============== SAVE JOB ================= */
 async function saveJob() {
   const job = {
-    vin: job_vin.value.trim(),
-    year: job_year.value,
-    make: job_make.value,
-    model: job_model.value,
-    customer: job_customer.value,
-    assigned: job_assigned.value,
-    work_type: job_work_type.value,
-    notes: job_notes.value,
+    vin: (document.getElementById("job_vin").value || "").trim(),
+    year: document.getElementById("job_year").value || "",
+    make: document.getElementById("job_make").value || "",
+    model: document.getElementById("job_model").value || "",
+    customer: document.getElementById("job_customer").value || "",
+    assigned: document.getElementById("job_assigned").value || "",
+    work_type: document.getElementById("job_work_type").value || "",
+    notes: document.getElementById("job_notes").value || "",
     updated_at: new Date().toISOString()
   };
 
-  if (!job.vin) return alert("VIN required");
+  if (!job.vin) {
+    alert("VIN is required to save job.");
+    return;
+  }
 
-  await supabaseFetch(`${SUPABASE_URL}/rest/v1/${JOBS_TABLE}`, {
-    method: "POST",
-    body: JSON.stringify(job)
-  });
-
-  jobsHint.textContent = "Job saved ✔";
+  try {
+    await supabaseFetch(`${SUPABASE_URL}/rest/v1/${JOBS_TABLE}`, {
+      method: "POST",
+      body: JSON.stringify(job)
+    });
+    document.getElementById("jobsHint").textContent = "Job saved to cloud ✔";
+  } catch (e) {
+    console.error(e);
+    alert("Error saving job: " + e.message);
+  }
 }
 
 /* ============ VIN DECODE (API) ============ */
 async function decodeVinAndFill(vin) {
-  jobsHint.textContent = "Decoding VIN...";
-  const res = await fetch("/.netlify/functions/decode-vin", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ vin })
-  });
-  const data = await res.json();
+  const hint = document.getElementById("jobsHint");
+  hint.textContent = "Decoding VIN...";
 
-  job_year.value = data.year || "";
-  job_make.value = data.make || "";
-  job_model.value = data.model || "";
+  try {
+    const res = await fetch("/.netlify/functions/decode-vin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ vin })
+    });
 
-  jobsHint.textContent = "VIN decoded ✔";
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error("VIN decode error: " + txt);
+    }
+
+    const data = await res.json();
+
+    document.getElementById("job_year").value  = data.year  || "";
+    document.getElementById("job_make").value  = data.make  || "";
+    document.getElementById("job_model").value = data.model || "";
+
+    hint.textContent = "VIN decoded ✔ Check year/make/model.";
+  } catch (e) {
+    console.error(e);
+    hint.textContent = "VIN decode failed. Enter year/make/model manually.";
+    alert("VIN decode failed: " + e.message);
+  }
 }
 
 function decodeVinFromInput() {
-  const vin = job_vin.value.trim();
-  if (!vin) return alert("Enter VIN first");
+  const vin = (document.getElementById("job_vin").value || "").trim().toUpperCase();
+  if (!vin) {
+    alert("Type a VIN first.");
+    return;
+  }
+  if (vin.length !== 17) {
+    const ok = confirm("VIN is not 17 characters. Still try to decode?");
+    if (!ok) return;
+  }
   decodeVinAndFill(vin);
 }
 
@@ -170,51 +308,90 @@ function decodeVinFromInput() {
 let vinScannerRunning = false;
 
 function startVinScanner() {
-  vinScannerOverlay.style.display = "flex";
+  const overlay = document.getElementById("vinScannerOverlay");
+  const target  = document.getElementById("vinScanner");
+  const hint    = document.getElementById("jobsHint");
+
+  if (!overlay || !target) {
+    alert("VIN scanner UI not found.");
+    return;
+  }
+
+  overlay.style.display = "flex";
+
   if (vinScannerRunning) return;
   vinScannerRunning = true;
 
-  Quagga.init({
-    inputStream: {
-      type: "LiveStream",
-      target: vinScanner,
-      constraints: { facingMode: "environment" },
-      area: { top:"25%", right:"10%", left:"10%", bottom:"25%" }
+  Quagga.init(
+    {
+      inputStream: {
+        type: "LiveStream",
+        target: target,
+        constraints: {
+          facingMode: "environment"
+        }
+      },
+      locator: {
+        halfSample: true,
+        patchSize: "medium"
+      },
+      decoder: {
+        readers: [
+          "code_39_vin_reader",
+          "code_39_reader",
+          "code_128_reader"
+        ]
+      },
+      locate: true,
+      numOfWorkers: 0 // safer for iOS Safari
     },
-    decoder: {
-      readers: [
-        "code_39_vin_reader",
-        "code_39_reader",
-        "code_128_reader"
-      ]
-    },
-    locate:true,
-    numOfWorkers:0
-  }, err => {
-    if (err) {
-      alert("Camera error");
-      stopVinScanner();
-      return;
+    function (err) {
+      if (err) {
+        console.error(err);
+        alert("Could not start camera: " + err.message);
+        vinScannerRunning = false;
+        overlay.style.display = "none";
+        return;
+      }
+      Quagga.start();
+      if (hint) hint.textContent = "Scanning VIN... align barcode in the yellow box.";
     }
-    Quagga.start();
-  });
+  );
 
-  Quagga.onDetected(data => {
-    const raw = data.codeResult.code;
-    const vin = raw.replace(/[^A-Z0-9]/gi,"").toUpperCase();
+  Quagga.offDetected();
+  Quagga.onDetected(function (data) {
+    if (!data || !data.codeResult || !data.codeResult.code) return;
+
+    const raw = data.codeResult.code.trim();
+    console.log("Scanned raw:", raw, "format:", data.codeResult.format);
+
+    const vin = raw.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+
     if (vin.length === 17) {
       stopVinScanner();
-      job_vin.value = vin;
+
+      const vinInput = document.getElementById("job_vin");
+      if (vinInput) vinInput.value = vin;
+
+      if (hint) hint.textContent = "VIN scanned. Decoding vehicle info...";
       decodeVinAndFill(vin);
+    } else {
+      if (hint) {
+        hint.textContent = "Barcode read but VIN not valid (need 17 chars). Adjust and hold steady...";
+      }
     }
   });
 }
 
 function stopVinScanner() {
-  vinScannerOverlay.style.display = "none";
-  try { Quagga.stop(); } catch(e){}
-  Quagga.offDetected();
-  vinScannerRunning = false;
+  const overlay = document.getElementById("vinScannerOverlay");
+  if (overlay) overlay.style.display = "none";
+
+  if (vinScannerRunning) {
+    try { Quagga.stop(); } catch (e) { console.warn("Quagga stop error:", e); }
+    Quagga.offDetected();
+    vinScannerRunning = false;
+  }
 }
 </script>
 </body>
