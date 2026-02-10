@@ -2,1222 +2,220 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>E Collision ñ Jobs & Paint (Cloud)</title>
+  <title>E Collision ‚Äì Job Tracker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#111827" />
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png" />
-  <!-- Quagga for live VIN barcode scanning -->
+
+  <!-- VIN Barcode Scanner -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+
   <style>
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f3f4f6;
-      color: #111827;
+    body { font-family: system-ui; background:#f3f4f6; margin:0; }
+    header { background:#111827; color:white; padding:12px; }
+    h1 { font-size:18px; margin:0; }
+    .container { max-width:900px; margin:auto; padding:12px; }
+    .card { background:white; padding:12px; border-radius:10px; box-shadow:0 2px 4px rgba(0,0,0,.1); margin-bottom:12px; }
+    label { font-size:12px; color:#555; display:block; margin-top:6px; }
+    input, select, textarea { width:100%; padding:7px; border-radius:6px; border:1px solid #ccc; }
+    textarea { min-height:60px; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; }
+    .col { flex:1; min-width:140px; }
+    button { border:none; padding:8px 14px; border-radius:999px; cursor:pointer; }
+    .btn-primary { background:#111827; color:white; }
+    .btn-secondary { background:#e5e7eb; }
+    .btn-danger { background:#b91c1c; color:white; }
+    .hint { font-size:12px; color:#555; margin-top:6px; }
+
+    /* VIN Scanner Overlay */
+    #vinScannerOverlay {
+      position:fixed; inset:0; background:rgba(0,0,0,.85);
+      display:none; z-index:100; align-items:center; justify-content:center;
+      flex-direction:column; color:white;
     }
-    header {
-      background: #111827;
-      color: white;
-      padding: 10px 16px;
-    }
-    header h1 {
-      margin: 0;
-      font-size: 18px;
-    }
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 10px 10px 40px;
-    }
-    .tabs {
-      display: flex;
-      gap: 8px;
-      margin-top: 8px;
-    }
-    .tab-btn {
-      padding: 6px 12px;
-      border-radius: 999px;
-      border: none;
-      font-size: 13px;
-      cursor: pointer;
-      background: #374151;
-      color: #e5e7eb;
-    }
-    .tab-btn.active {
-      background: #fbbf24;
-      color: #111827;
-      font-weight: 600;
-    }
-    .pill {
-      font-size: 11px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: #eef2ff;
-      color: #3730a3;
-      display: inline-block;
-      margin-left: 8px;
-    }
-    .grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 12px;
-    }
-    .card {
-      background: white;
-      border-radius: 10px;
-      padding: 10px;
-      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
-      flex: 1 1 340px;
-    }
-    h2 {
-      font-size: 16px;
-      margin: 0 0 8px;
-    }
-    label {
-      display: block;
-      font-size: 12px;
-      margin-top: 6px;
-      color: #4b5563;
-    }
-    input,
-    select,
-    textarea {
-      width: 100%;
-      padding: 6px 8px;
-      margin-top: 2px;
-      border-radius: 6px;
-      border: 1px solid #d1d5db;
-      font-size: 13px;
-      box-sizing: border-box;
-    }
-    textarea {
-      min-height: 60px;
-      resize: vertical;
-    }
-    button {
-      border: none;
-      border-radius: 999px;
-      padding: 7px 13px;
-      font-size: 13px;
-      cursor: pointer;
-      margin-top: 6px;
-    }
-    .btn-primary {
-      background: #111827;
-      color: white;
-    }
-    .btn-secondary {
-      background: #e5e7eb;
-      color: #111827;
-    }
-    .btn-danger {
-      background: #b91c1c;
-      color: white;
-    }
-    .row {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .col-2 {
-      flex: 1 1 calc(50% - 4px);
-      min-width: 140px;
-    }
-    .col-3 {
-      flex: 1 1 calc(33.3% - 6px);
-      min-width: 110px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-      margin-top: 6px;
-    }
-    th,
-    td {
-      padding: 6px 4px;
-      border-bottom: 1px solid #e5e7eb;
-      text-align: left;
-    }
-    th {
-      font-size: 11px;
-      text-transform: uppercase;
-      color: #6b7280;
-    }
-    .filter-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-      margin-bottom: 4px;
-    }
-    .filter-row input,
-    .filter-row select {
-      max-width: 180px;
-    }
-    .text-sm {
-      font-size: 12px;
-      color: #9ca3af;
-    }
-    .text-sm-dark {
-      font-size: 12px;
-      color: #4b5563;
-    }
-    .env-warning {
-      font-size: 11px;
-      color: #b91c1c;
-      margin-top: 4px;
-    }
-    .status-pill {
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: #ecfeff;
-      color: #0e7490;
-    }
-    .qty-pill {
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: #ecfeff;
-      color: #0e7490;
-    }
-    .low {
-      background: #fef2f2;
-      color: #b91c1c;
-    }
-    .hidden {
-      display: none;
-    }
+    #vinScanner { width:90%; max-width:480px; border:2px solid #fbbf24; border-radius:8px; }
   </style>
 </head>
+
 <body>
 <header>
-  <div class="container">
-    <div style="display:flex; align-items:center; justify-content:space-between;">
-      <h1>E Collision ñ Jobs & Paint (Cloud)</h1>
-      <div class="text-sm">Shared across iPhones via Supabase</div>
-    </div>
-    <div class="tabs">
-      <button class="tab-btn active" id="tabJobsBtn" onclick="showTab('jobs')">
-        Jobs
-        <span class="pill" id="jobsCountPill">0</span>
-      </button>
-      <button class="tab-btn" id="tabPaintBtn" onclick="showTab('paint')">
-        Paint
-        <span class="pill" id="paintCountPill">0</span>
-      </button>
-    </div>
-  </div>
+  <h1>E Collision ‚Äì Job Tracker</h1>
 </header>
 
 <div class="container">
-  <!-- ===== JOBS TAB ===== -->
-  <div id="jobsTab">
-    <div class="grid">
-      <div class="card">
-        <h2>Collision Job Sheet</h2>
-        <div class="env-warning" id="jobsEnvWarning"></div>
 
-        <div class="row">
-          <div class="col-2">
-            <label for="job_vin">VIN</label>
-            <input id="job_vin" placeholder="Scan or type VIN" />
-          </div>
-          <div class="col-2">
-            <label for="job_ro">RO #</label>
-            <input id="job_ro" placeholder="Repair Order #" />
-          </div>
-        </div>
+  <!-- JOB FORM -->
+  <div class="card">
+    <h2>New / Edit Job</h2>
 
-        <div class="row">
-          <div class="col-2">
-            <label for="job_customer">Customer</label>
-            <input id="job_customer" placeholder="Customer name" />
-          </div>
-          <div class="col-2">
-            <label for="job_assigned">Assigned To</label>
-            <input id="job_assigned" placeholder="Tech (Alex / Ivan / Danny)" />
-          </div>
-        </div>
+    <label>VIN</label>
+    <input id="job_vin" placeholder="Scan or type VIN">
 
-        <div class="row">
-          <div class="col-3">
-            <label for="job_year">Year</label>
-            <input id="job_year" placeholder="2020" />
-          </div>
-          <div class="col-3">
-            <label for="job_make">Make</label>
-            <input id="job_make" placeholder="Honda / Toyota / GM" />
-          </div>
-          <div class="col-3">
-            <label for="job_model">Model</label>
-            <input id="job_model" placeholder="Civic / RAV4" />
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="col-2">
-            <label for="job_color">Color</label>
-            <input id="job_color" placeholder="White / Black / Silver" />
-          </div>
-          <div class="col-2">
-            <label for="job_work_type">Work Type</label>
-            <input id="job_work_type" placeholder="Body / Paint / Blend / Frame" />
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="col-2">
-            <label for="job_status">Status</label>
-            <select id="job_status">
-              <option value="Intake">Intake</option>
-              <option value="In Body">In Body</option>
-              <option value="In Paint">In Paint</option>
-              <option value="Buff / Detail">Buff / Detail</option>
-              <option value="Ready for Delivery">Ready for Delivery</option>
-              <option value="Delivered">Delivered</option>
-            </select>
-          </div>
-          <div class="col-2">
-            <label for="job_check_in">Check In</label>
-            <input id="job_check_in" type="date" />
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="col-2">
-            <label for="job_due">Due Date</label>
-            <input id="job_due" type="date" />
-          </div>
-          <div class="col-2"></div>
-        </div>
-
-        <label for="job_notes">Job Notes</label>
-        <textarea id="job_notes" placeholder="Damage areas, insurance, deductible, etc."></textarea>
-
-        <div class="row" style="margin-top:6px;">
-          <button class="btn-primary" type="button" onclick="saveJob()">Save Job</button>
-          <button class="btn-secondary" type="button" onclick="clearJobForm()">Clear</button>
-          <button class="btn-secondary" type="button" onclick="startVinScanner()">Scan VIN (Camera)</button>
-          <button class="btn-danger" type="button" id="jobDeleteBtn" onclick="deleteJob()" style="display:none;">Delete</button>
-        </div>
-
-        <div class="text-sm-dark" id="jobsHint" style="margin-top:6px;">
-          New job ñ VIN + RO recommended.
-        </div>
+    <div class="row">
+      <div class="col">
+        <label>Year</label>
+        <input id="job_year">
       </div>
-
-      <div class="card">
-        <h2>Jobs List</h2>
-        <div class="filter-row">
-          <div>
-            <label for="jobFilterSearch" style="margin-top:0;">Search</label>
-            <input id="jobFilterSearch" placeholder="VIN, customer, RO, make..." oninput="renderJobs()" />
-          </div>
-          <div>
-            <label for="jobFilterStatus" style="margin-top:0;">Status</label>
-            <select id="jobFilterStatus" onchange="renderJobs()">
-              <option value="All">All</option>
-              <option value="Intake">Intake</option>
-              <option value="In Body">In Body</option>
-              <option value="In Paint">In Paint</option>
-              <option value="Buff / Detail">Buff / Detail</option>
-              <option value="Ready for Delivery">Ready for Delivery</option>
-              <option value="Delivered">Delivered</option>
-            </select>
-          </div>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>VIN</th>
-              <th>Customer</th>
-              <th>Vehicle</th>
-              <th>Status</th>
-              <th>Due</th>
-            </tr>
-          </thead>
-          <tbody id="jobsBody"></tbody>
-        </table>
+      <div class="col">
+        <label>Make</label>
+        <input id="job_make">
+      </div>
+      <div class="col">
+        <label>Model</label>
+        <input id="job_model">
       </div>
     </div>
-  </div>
 
-  <!-- VIN Live Scanner Overlay -->
-  <div id="vinScannerOverlay" class="hidden" style="
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.85);
-    z-index: 50;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: white;
-  ">
-    <div id="vinScanner" style="width: 90%; max-width: 500px; border: 2px solid #fbbf24; border-radius: 8px; overflow: hidden;"></div>
-    <div class="text-sm" style="margin-top:8px; text-align:center;">
-      Point the camera at the VIN barcode. Hold steady until it closes.
+    <div class="row">
+      <div class="col">
+        <label>Customer</label>
+        <input id="job_customer">
+      </div>
+      <div class="col">
+        <label>Assigned Tech</label>
+        <input id="job_assigned">
+      </div>
     </div>
-    <button class="btn-secondary" type="button" onclick="stopVinScanner()" style="margin-top:10px;">
-      Cancel
-    </button>
-  </div>
 
-  <!-- ===== PAINT TAB ===== -->
-  <div id="paintTab" style="display:none;">
-    <div class="grid">
-      <!-- New / Edit Paint -->
-      <div class="card">
-        <h2>Paint Inventory Item</h2>
-        <div class="env-warning" id="paintEnvWarning"></div>
+    <label>Work Type</label>
+    <input id="job_work_type" placeholder="Body / Paint / Blend">
 
-        <div class="row">
-          <div class="col-2">
-            <label for="brand">Brand</label>
-            <input id="brand" placeholder="PPG / BASF / Sherwin / MIPA" />
-          </div>
-          <div class="col-2">
-            <label for="paint_code">Paint Code</label>
-            <input id="paint_code" placeholder="e.g. WA8624 / k3g" />
-          </div>
-        </div>
+    <label>Notes</label>
+    <textarea id="job_notes"></textarea>
 
-        <div class="row">
-          <div class="col-2">
-            <label for="color_name">Color Name</label>
-            <input id="color_name" placeholder="White Diamond, etc." />
-          </div>
-          <div class="col-2">
-            <label for="size">Size</label>
-            <select id="size">
-              <option value="Quart">Quart</option>
-              <option value="Gallon">Gallon</option>
-              <option value="Half Gallon">Half Gallon</option>
-              <option value="Pint">Pint</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-        </div>
+    <div class="row" style="margin-top:10px;">
+      <button class="btn-primary" onclick="saveJob()">Save Job</button>
+      <button class="btn-secondary" onclick="startVinScanner()">Scan VIN (Camera)</button>
+      <button class="btn-secondary" onclick="decodeVinFromInput()">Decode VIN (Manual)</button>
+    </div>
 
-        <div class="row">
-          <div class="col-2">
-            <label for="quantity">Quantity in Stock</label>
-            <input id="quantity" type="number" step="0.01" placeholder="e.g. 1, 2.5" />
-          </div>
-          <div class="col-2">
-            <label for="cost">Cost (per unit)</label>
-            <input id="cost" type="number" step="0.01" placeholder="e.g. 120.00" />
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="col-2">
-            <label for="supplier">Supplier</label>
-            <input id="supplier" placeholder="Paint My Ride, etc." />
-          </div>
-          <div class="col-2">
-            <label for="invoice_number">Invoice #</label>
-            <input id="invoice_number" placeholder="e.g. 1807583" />
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="col-2">
-            <label for="received_date">Received Date</label>
-            <input id="received_date" type="date" />
-          </div>
-          <div class="col-2"></div>
-        </div>
-
-        <label for="notes">Notes</label>
-        <textarea id="notes" placeholder="GM/CHEV | WA8624 | WHITE 85-26 | 0.5 Pint"></textarea>
-
-        <div class="row" style="margin-top:6px;">
-          <button class="btn-primary" type="button" onclick="savePaint()">Save Paint</button>
-          <button class="btn-secondary" type="button" onclick="clearPaintForm()">Clear</button>
-          <button class="btn-secondary" type="button" onclick="triggerInvoiceCapture()">Scan Invoice (OCR)</button>
-          <button class="btn-danger" type="button" onclick="deletePaint()" id="deletePaintBtn" style="display:none;">Delete</button>
-        </div>
-
-        <!-- Hidden camera/file input for OCR -->
-        <input
-          id="invoiceImageInput"
-          type="file"
-          accept="image/*"
-          capture="environment"
-          style="display:none"
-        />
-
-        <div class="text-sm-dark" id="paintHint" style="margin-top:6px;">
-          New paint ñ brand + paint code recommended.
-        </div>
-      </div>
-
-      <!-- Inventory List -->
-      <div class="card">
-        <h2>Paint Inventory</h2>
-        <div class="filter-row">
-          <div>
-            <label for="filterBrand" style="margin-top:0;">Brand</label>
-            <input id="filterBrand" placeholder="PPG, BASF..." oninput="renderPaints()" />
-          </div>
-          <div>
-            <label for="filterSearch" style="margin-top:0;">Search</label>
-            <input id="filterSearch" placeholder="Code, color, notes..." oninput="renderPaints()" />
-          </div>
-          <div>
-            <label for="filterLow" style="margin-top:0;">Low stock</label>
-            <select id="filterLow" onchange="renderPaints()">
-              <option value="All">All</option>
-              <option value="LowOnly">&lt;= 0.5</option>
-            </select>
-          </div>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Brand</th>
-              <th>Code</th>
-              <th>Color</th>
-              <th>Size</th>
-              <th>Qty</th>
-              <th>Invoice</th>
-            </tr>
-          </thead>
-          <tbody id="paintBody"></tbody>
-        </table>
-      </div>
+    <div class="hint" id="jobsHint">
+      Scan VIN from door sticker barcode. If scan fails, type VIN and tap ‚ÄúDecode VIN (Manual)‚Äù.
     </div>
   </div>
 </div>
 
+<!-- VIN SCANNER OVERLAY -->
+<div id="vinScannerOverlay">
+  <div id="vinScanner"></div>
+  <p>Align VIN barcode in the box</p>
+  <button class="btn-secondary" onclick="stopVinScanner()">Cancel</button>
+</div>
+
 <script>
-  // ====== SUPABASE CONFIG ñ CHANGE THESE ======
-  const SUPABASE_URL = "https://xmbochwqaeakijotbcof.supabase.co"; // TODO: change
-  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtYm9jaHdxYWVha2lqb3RiY29mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjI5MTIsImV4cCI6MjA4NDU5ODkxMn0.YoxRzHEDrM9pDNEOL7mLaJewzcGB3jbZ-rc4IkR1hmQ";             // TODO: change
-  const JOBS_TABLE = "jobs";
-  const PAINT_TABLE = "paint_inventory";
-
-  function supabaseConfigured() {
-    return !SUPABASE_URL.includes("YOUR-PROJECT") && SUPABASE_KEY !== "YOUR_ANON_PUBLIC_KEY";
-  }
-
-  async function fetchJSON(url, options = {}) {
-    if (!supabaseConfigured()) {
-      throw new Error("Supabase not configured");
-    }
-    const headers = options.headers || {};
-    headers["apikey"] = SUPABASE_KEY;
-    headers["Authorization"] = "Bearer " + SUPABASE_KEY;
-    headers["Content-Type"] = "application/json";
-    headers["Prefer"] = headers["Prefer"] || "return=representation";
-    options.headers = headers;
-    const res = await fetch(url, options);
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error("Error " + res.status + ": " + txt);
-    }
-    return await res.json();
-  }
-
-  // ===== JOBS (Cloud) =====
-  let JOBS = [];
-
-  async function loadJobs() {
-    const url = SUPABASE_URL + "/rest/v1/" + JOBS_TABLE + "?select=*";
-    return await fetchJSON(url, { method: "GET" });
-  }
-
-  async function upsertJob(job) {
-    const url = SUPABASE_URL + "/rest/v1/" + JOBS_TABLE;
-    return await fetchJSON(url, {
-      method: "POST",
-      body: JSON.stringify([job]),
-      headers: { "Prefer": "resolution=merge-duplicates,return=representation" }
-    });
-  }
-
-  async function deleteJobFromCloud(id) {
-    const url = SUPABASE_URL + "/rest/v1/" + JOBS_TABLE + "?id=eq." + encodeURIComponent(id);
-    return await fetchJSON(url, { method: "DELETE" });
-  }
-
-  async function refreshJobs() {
-    try {
-      JOBS = await loadJobs();
-      renderJobs();
-      const el = document.getElementById("jobsHint");
-      if (el) el.textContent = "Loaded jobs from cloud.";
-    } catch (e) {
-      console.error(e);
-      const el = document.getElementById("jobsHint");
-      if (el) el.textContent = "Could not load jobs. Check Supabase config.";
-    }
-  }
-
-  function clearJobForm() {
-    const ids = [
-      "job_vin","job_ro","job_customer","job_assigned",
-      "job_year","job_make","job_model","job_color",
-      "job_work_type","job_status","job_check_in","job_due","job_notes"
-    ];
-    ids.forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      if (id === "job_status") el.value = "Intake";
-      else el.value = "";
-    });
-    const hint = document.getElementById("jobsHint");
-    if (hint) hint.textContent = "New job ñ VIN + RO recommended.";
-    const delBtn = document.getElementById("jobDeleteBtn");
-    if (delBtn) delBtn.style.display = "none";
-  }
-
-  function findExistingJob(vin, ro) {
-    return JOBS.find(j =>
-      (j.vin || "").toLowerCase() === vin.toLowerCase() &&
-      (j.ro || "").toLowerCase() === ro.toLowerCase()
-    );
-  }
-
-  async function saveJob() {
-    const vin = (document.getElementById("job_vin")?.value || "").trim();
-    const ro = (document.getElementById("job_ro")?.value || "").trim();
-
-    if (!vin && !ro) {
-      alert("At least VIN or RO # is required.");
-      return;
-    }
-
-    const existing = findExistingJob(vin, ro);
-    const job = {
-      id: existing ? existing.id : undefined,
-      vin,
-      ro,
-      customer: (document.getElementById("job_customer")?.value || "").trim(),
-      year: (document.getElementById("job_year")?.value || "").trim(),
-      make: (document.getElementById("job_make")?.value || "").trim(),
-      model: (document.getElementById("job_model")?.value || "").trim(),
-      color: (document.getElementById("job_color")?.value || "").trim(),
-      work_type: (document.getElementById("job_work_type")?.value || "").trim(),
-      status: document.getElementById("job_status")?.value || "Intake",
-      assigned: (document.getElementById("job_assigned")?.value || "").trim(),
-      check_in: document.getElementById("job_check_in")?.value || null,
-      due: document.getElementById("job_due")?.value || null,
-      notes: (document.getElementById("job_notes")?.value || "").trim(),
-      updated_at: new Date().toISOString()
-    };
-
-    try {
-      const res = await upsertJob(job);
-      const saved = res[0];
-      const idx = JOBS.findIndex(j => j.id === saved.id);
-      if (idx >= 0) JOBS[idx] = saved; else JOBS.push(saved);
-      const hint = document.getElementById("jobsHint");
-      if (hint) hint.textContent = "Job saved to cloud.";
-      const delBtn = document.getElementById("jobDeleteBtn");
-      if (delBtn) delBtn.style.display = "inline-block";
-      renderJobs();
-    } catch (e) {
-      console.error(e);
-      alert("Error saving job: " + e.message);
-    }
-  }
-
-  async function deleteJob() {
-    const vin = (document.getElementById("job_vin")?.value || "").trim();
-    const ro = (document.getElementById("job_ro")?.value || "").trim();
-    const existing = findExistingJob(vin, ro);
-    if (!existing) {
-      alert("No matching job found to delete.");
-      return;
-    }
-    if (!confirm("Delete this job from cloud?")) return;
-    try {
-      await deleteJobFromCloud(existing.id);
-      JOBS = JOBS.filter(j => j.id !== existing.id);
-      clearJobForm();
-      renderJobs();
-    } catch (e) {
-      console.error(e);
-      alert("Error deleting job: " + e.message);
-    }
-  }
-
-  function loadJobIntoForm(id) {
-    const j = JOBS.find(x => x.id === id);
-    if (!j) return;
-    const setVal = (id, v) => {
-      const el = document.getElementById(id);
-      if (el) el.value = v ?? "";
-    };
-    setVal("job_vin", j.vin || "");
-    setVal("job_ro", j.ro || "");
-    setVal("job_customer", j.customer || "");
-    setVal("job_assigned", j.assigned || "");
-    setVal("job_year", j.year || "");
-    setVal("job_make", j.make || "");
-    setVal("job_model", j.model || "");
-    setVal("job_color", j.color || "");
-    setVal("job_work_type", j.work_type || "");
-    setVal("job_status", j.status || "Intake");
-    setVal("job_check_in", j.check_in || "");
-    setVal("job_due", j.due || "");
-    setVal("job_notes", j.notes || "");
-    const hint = document.getElementById("jobsHint");
-    if (hint) hint.textContent = "Editing existing job (cloud).";
-    const delBtn = document.getElementById("jobDeleteBtn");
-    if (delBtn) delBtn.style.display = "inline-block";
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function renderJobs() {
-    const body = document.getElementById("jobsBody");
-    if (!body) return;
-    body.innerHTML = "";
-
-    const filterText = (document.getElementById("jobFilterSearch")?.value || "").trim().toLowerCase();
-    const filterStatus = document.getElementById("jobFilterStatus")?.value || "All";
-
-    let filtered = JOBS.slice();
-
-    if (filterText) {
-      filtered = filtered.filter(j =>
-        (j.vin || "").toLowerCase().includes(filterText) ||
-        (j.ro || "").toLowerCase().includes(filterText) ||
-        (j.customer || "").toLowerCase().includes(filterText) ||
-        (j.make || "").toLowerCase().includes(filterText) ||
-        (j.model || "").toLowerCase().includes(filterText)
-      );
-    }
-
-    if (filterStatus !== "All") {
-      filtered = filtered.filter(j => (j.status || "") === filterStatus);
-    }
-
-    filtered.sort((a, b) => {
-      const da = a.check_in || "";
-      const db = b.check_in || "";
-      if (da < db) return 1;
-      if (da > db) return -1;
-      return 0;
-    });
-
-    filtered.forEach(j => {
-      const tr = document.createElement("tr");
-      const vehicle = [j.year, j.make, j.model].filter(Boolean).join(" ");
-      tr.innerHTML = `
-        <td><button class="btn-secondary" type="button" onclick="loadJobIntoForm('${j.id}')">${j.vin || "-"}</button></td>
-        <td>${j.customer || "-"}</td>
-        <td>${vehicle || "-"}</td>
-        <td><span class="status-pill">${j.status || "-"}</span></td>
-        <td>${j.due || "-"}</td>
-      `;
-      body.appendChild(tr);
-    });
-
-    const pill = document.getElementById("jobsCountPill");
-    if (pill) pill.textContent = JOBS.length;
-  }
-
-  // ===== VIN DECODE HELPER (Netlify function decode-vin) =====
-  async function decodeVinAndFill(vin) {
-    try {
-      const hint = document.getElementById("jobsHint");
-      if (hint) hint.textContent = "Decoding VIN to get year/make/model...";
-
-      const res = await fetch("/.netlify/functions/decode-vin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vin })
-      });
-
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error("VIN decode error: " + txt);
-      }
-
-      const data = await res.json();
-
-      const setVal = (id, value) => {
-        if (!value) return;
-        const el = document.getElementById(id);
-        if (el) el.value = value;
-      };
-
-      setVal("job_year", data.year);
-      setVal("job_make", data.make);
-      setVal("job_model", data.model);
-
-      if (hint) hint.textContent = "VIN decoded. Check year/make/model and save job.";
-    } catch (e) {
-      console.error(e);
-      const hint = document.getElementById("jobsHint");
-      if (hint) hint.textContent = "VIN decode failed. Enter year/make/model manually.";
-    }
-  }
-
-  // ===== VIN LIVE SCANNER (iPhone camera, Quagga) =====
-  let vinScannerRunning = false;
-
-  function startVinScanner() {
-    const overlay = document.getElementById("vinScannerOverlay");
-    const target = document.getElementById("vinScanner");
-    if (!overlay || !target) {
-      alert("VIN scanner container not found.");
-      return;
-    }
-
-    overlay.classList.remove("hidden");
-
-    if (vinScannerRunning) {
-      return;
-    }
-
-    vinScannerRunning = true;
-
-    Quagga.init(
-      {
-        inputStream: {
-          name: "Live",
-          type: "LiveStream",
-          target: target,
-          constraints: {
-            facingMode: "environment"
-          }
-        },
-        decoder: {
-          readers: ["code_39_vin_reader", "code_39_reader", "code_128_reader"]
-        },
-        locate: true
-      },
-      function (err) {
-        if (err) {
-          console.error(err);
-          alert("Could not start VIN scanner: " + err.message);
-          vinScannerRunning = false;
-          overlay.classList.add("hidden");
-          return;
-        }
-        Quagga.start();
-        const hint = document.getElementById("jobsHint");
-        if (hint) hint.textContent = "Scanning VIN... hold camera steady.";
-      }
-    );
-
-    Quagga.offDetected();
-    Quagga.onDetected(function (data) {
-      if (!data || !data.codeResult || !data.codeResult.code) return;
-
-      const raw = data.codeResult.code.trim();
-      const vin = raw.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
-
-      if (vin.length === 17) {
-        stopVinScanner();
-
-        const vinInput = document.getElementById("job_vin");
-        if (vinInput) vinInput.value = vin;
-
-        const hint = document.getElementById("jobsHint");
-        if (hint) hint.textContent = "VIN scanned. Decoding vehicle info...";
-
-        if (typeof decodeVinAndFill === "function") {
-          decodeVinAndFill(vin);
-        }
-      } else {
-        console.log("Scanned code not valid VIN:", raw);
-      }
-    });
-  }
-
-  function stopVinScanner() {
-    const overlay = document.getElementById("vinScannerOverlay");
-    if (overlay) overlay.classList.add("hidden");
-
-    if (vinScannerRunning) {
-      try {
-        Quagga.stop();
-      } catch (e) {
-        console.warn("Quagga stop error:", e);
-      }
-      Quagga.offDetected();
-      vinScannerRunning = false;
-    }
-  }
-
-  // ===== PAINT (Cloud) =====
-  let PAINTS = [];
-
-  async function loadPaints() {
-    const url = SUPABASE_URL + "/rest/v1/" + PAINT_TABLE + "?select=*";
-    return await fetchJSON(url, { method: "GET" });
-  }
-
-  async function upsertPaint(p) {
-    const url = SUPABASE_URL + "/rest/v1/" + PAINT_TABLE;
-    return await fetchJSON(url, {
-      method: "POST",
-      body: JSON.stringify([p]),
-      headers: { "Prefer": "resolution=merge-duplicates,return=representation" }
-    });
-  }
-
-  async function deletePaintFromCloud(id) {
-    const url = SUPABASE_URL + "/rest/v1/" + PAINT_TABLE + "?id=eq." + encodeURIComponent(id);
-    return await fetchJSON(url, { method: "DELETE" });
-  }
-
-  async function refreshPaints() {
-    try {
-      PAINTS = await loadPaints();
-      renderPaints();
-      const hint = document.getElementById("paintHint");
-      if (hint) hint.textContent = "Loaded paint from cloud.";
-    } catch (e) {
-      console.error(e);
-      const hint = document.getElementById("paintHint");
-      if (hint) hint.textContent = "Could not load paint. Check Supabase config.";
-    }
-  }
-
-  function clearPaintForm() {
-    const ids = [
-      "brand","paint_code","color_name","size","quantity","cost",
-      "supplier","invoice_number","received_date","notes"
-    ];
-    ids.forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      if (id === "size") el.value = "Quart"; else el.value = "";
-    });
-    const hint = document.getElementById("paintHint");
-    if (hint) hint.textContent = "New paint ñ brand + paint code recommended.";
-    const delBtn = document.getElementById("deletePaintBtn");
-    if (delBtn) delBtn.style.display = "none";
-  }
-
-  function findExistingPaint(brand, code, size) {
-    return PAINTS.find(
-      p =>
-        (p.brand || "").toLowerCase() === brand.toLowerCase() &&
-        (p.paint_code || "").toLowerCase() === code.toLowerCase() &&
-        (p.size || "").toLowerCase() === size.toLowerCase()
-    );
-  }
-
-  async function savePaint() {
-    const brand = (document.getElementById("brand")?.value || "").trim();
-    const paint_code = (document.getElementById("paint_code")?.value || "").trim();
-    const size = document.getElementById("size")?.value || "Quart";
-
-    if (!brand && !paint_code) {
-      alert("At least Brand or Paint Code is required.");
-      return;
-    }
-
-    const quantityStr = (document.getElementById("quantity")?.value || "").trim();
-    const costStr = (document.getElementById("cost")?.value || "").trim();
-    const qty = quantityStr ? parseFloat(quantityStr) : null;
-    const cost = costStr ? parseFloat(costStr) : null;
-
-    const existing = findExistingPaint(brand, paint_code, size);
-    const item = {
-      id: existing ? existing.id : undefined,
-      brand,
-      paint_code,
-      color_name: (document.getElementById("color_name")?.value || "").trim(),
-      size,
-      quantity: qty,
-      cost,
-      supplier: (document.getElementById("supplier")?.value || "").trim(),
-      invoice_number: (document.getElementById("invoice_number")?.value || "").trim(),
-      received_date: document.getElementById("received_date")?.value || null,
-      notes: (document.getElementById("notes")?.value || "").trim(),
-      updated_at: new Date().toISOString()
-    };
-
-    try {
-      const res = await upsertPaint(item);
-      const saved = res[0];
-      const idx = PAINTS.findIndex(p => p.id === saved.id);
-      if (idx >= 0) PAINTS[idx] = saved; else PAINTS.push(saved);
-      const hint = document.getElementById("paintHint");
-      if (hint) hint.textContent = "Paint saved to cloud.";
-      const delBtn = document.getElementById("deletePaintBtn");
-      if (delBtn) delBtn.style.display = "inline-block";
-      renderPaints();
-    } catch (e) {
-      console.error(e);
-      alert("Error saving paint: " + e.message);
-    }
-  }
-
-  async function deletePaint() {
-    const brand = (document.getElementById("brand")?.value || "").trim();
-    const paint_code = (document.getElementById("paint_code")?.value || "").trim();
-    const size = document.getElementById("size")?.value || "Quart";
-
-    const existing = findExistingPaint(brand, paint_code, size);
-    if (!existing) {
-      alert("No matching paint item found to delete.");
-      return;
-    }
-    if (!confirm("Delete this paint item from cloud?")) return;
-
-    try {
-      await deletePaintFromCloud(existing.id);
-      PAINTS = PAINTS.filter(p => p.id !== existing.id);
-      clearPaintForm();
-      renderPaints();
-    } catch (e) {
-      console.error(e);
-      alert("Error deleting paint: " + e.message);
-    }
-  }
-
-  function loadPaintIntoForm(id) {
-    const p = PAINTS.find(x => x.id === id);
-    if (!p) return;
-    const setVal = (id, v) => {
-      const el = document.getElementById(id);
-      if (el) el.value = v ?? "";
-    };
-    setVal("brand", p.brand || "");
-    setVal("paint_code", p.paint_code || "");
-    setVal("color_name", p.color_name || "");
-    setVal("size", p.size || "Quart");
-    setVal("quantity", p.quantity != null ? p.quantity : "");
-    setVal("cost", p.cost != null ? p.cost : "");
-    setVal("supplier", p.supplier || "");
-    setVal("invoice_number", p.invoice_number || "");
-    setVal("received_date", p.received_date || "");
-    setVal("notes", p.notes || "");
-    const hint = document.getElementById("paintHint");
-    if (hint) hint.textContent = "Editing existing paint item (cloud).";
-    const delBtn = document.getElementById("deletePaintBtn");
-    if (delBtn) delBtn.style.display = "inline-block";
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function renderPaints() {
-    const body = document.getElementById("paintBody");
-    if (!body) return;
-    body.innerHTML = "";
-
-    const filterBrand = (document.getElementById("filterBrand")?.value || "").trim().toLowerCase();
-    const filterSearch = (document.getElementById("filterSearch")?.value || "").trim().toLowerCase();
-    const filterLow = document.getElementById("filterLow")?.value || "All";
-
-    let filtered = PAINTS.slice();
-
-    if (filterBrand) {
-      filtered = filtered.filter(p => (p.brand || "").toLowerCase().includes(filterBrand));
-    }
-    if (filterSearch) {
-      filtered = filtered.filter(
-        p =>
-          (p.paint_code || "").toLowerCase().includes(filterSearch) ||
-          (p.color_name || "").toLowerCase().includes(filterSearch) ||
-          (p.notes || "").toLowerCase().includes(filterSearch)
-      );
-    }
-    if (filterLow === "LowOnly") {
-      filtered = filtered.filter(p => p.quantity != null && p.quantity <= 0.5);
-    }
-
-    filtered.sort((a, b) => {
-      const ba = (a.brand || "").toLowerCase();
-      const bb = (b.brand || "").toLowerCase();
-      if (ba < bb) return -1;
-      if (ba > bb) return 1;
-      const ca = (a.paint_code || "").toLowerCase();
-      const cb = (b.paint_code || "").toLowerCase();
-      if (ca < cb) return -1;
-      if (ca > cb) return 1;
-      return 0;
-    });
-
-    filtered.forEach(p => {
-      const low = p.quantity != null && p.quantity <= 0.5;
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td><button class="btn-secondary" type="button" onclick="loadPaintIntoForm('${p.id}')">${p.brand || "-"}</button></td>
-        <td>${p.paint_code || "-"}</td>
-        <td>${p.color_name || "-"}</td>
-        <td>${p.size || "-"}</td>
-        <td><span class="qty-pill ${low ? "low" : ""}">${p.quantity != null ? p.quantity : "-"}</span></td>
-        <td>${p.invoice_number || "-"}</td>
-      `;
-      body.appendChild(tr);
-    });
-
-    const pill = document.getElementById("paintCountPill");
-    if (pill) pill.textContent = PAINTS.length;
-  }
-
-  // ===== Invoice OCR helpers =====
-  function triggerInvoiceCapture() {
-    const input = document.getElementById("invoiceImageInput");
-    if (!input) {
-      alert("Camera input not found for invoice.");
-      return;
-    }
-    input.value = "";
-    input.onchange = handleInvoiceImageSelected;
-    input.click();
-  }
-
-  function extractPaintCodeFromNotes(notes) {
-    if (!notes) return null;
-
-    const lines = notes.split("\n").map(l => l.trim()).filter(Boolean);
-    const badWords = [
-      "MIPA","PPG","BASF","SHERWIN","DUPONT","SPI","STANDOX",
-      "PAINT","MY","RIDE","WHITE","BLACK","SILVER","GRAY","GREY",
-      "RED","BLUE","GREEN","GM","CHEV","CHEVY","GM/CHEV"
-    ];
-
-    for (const line of lines) {
-      const m = line.match(/WA\d{3,5}/i);
-      if (m) return m[0].toUpperCase();
-    }
-
-    for (const line of lines) {
-      const tokens = line
-        .split(/[|\s]+/)
-        .map(t => t.trim())
-        .filter(Boolean);
-      for (const tok of tokens) {
-        const up = tok.toUpperCase();
-        if (badWords.includes(up)) continue;
-        if (up.length < 2 || up.length > 6) continue;
-        if (!/[A-Z]/.test(up) || !/[0-9]/.test(up)) continue;
-        return up;
-      }
-    }
-    return null;
-  }
-
-  function handleInvoiceImageSelected(event) {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result;
-
-      const setHint = (msg) => {
-        const el = document.getElementById("paintHint");
-        if (el) el.textContent = msg;
-      };
-      const setValueIfExists = (id, value) => {
-        if (value == null) return;
-        const el = document.getElementById(id);
-        if (el) el.value = value;
-      };
-
-      try {
-        setHint("Sending invoice to OCR...");
-
-        const res = await fetch("/.netlify/functions/ocr-invoice", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageBase64: base64 })
-        });
-
-        if (!res.ok) {
-          const txt = await res.text();
-          throw new Error("OCR error: " + txt);
-        }
-
-        const data = await res.json();
-
-        setValueIfExists("supplier", data.supplier);
-        setValueIfExists("invoice_number", data.invoice_number);
-        if (data.cost != null) {
-          setValueIfExists("cost", data.cost);
-        }
-
-        if (data.notes) {
-          const notesEl = document.getElementById("notes");
-          if (notesEl) {
-            if (notesEl.value) {
-              notesEl.value = notesEl.value + "\n" + data.notes;
-            } else {
-              notesEl.value = data.notes;
-            }
-          }
-        }
-
-        const notesText = data.notes || document.getElementById("notes")?.value || "";
-        const foundCode = extractPaintCodeFromNotes(notesText);
-        if (foundCode) {
-          setValueIfExists("paint_code", foundCode);
-        }
-
-        setHint("OCR filled fields from invoice. Review & Save.");
-      } catch (e) {
-        console.error(e);
-        alert("Could not process invoice image. " + e.message);
-        setHint("OCR failed. Enter fields manually.");
-      }
-    };
-
-    reader.readAsDataURL(file);
-  }
-
-  // ===== Tabs + Init =====
-  function showTab(tab) {
-    const jobsTab = document.getElementById("jobsTab");
-    const paintTab = document.getElementById("paintTab");
-    const jobsBtn = document.getElementById("tabJobsBtn");
-    const paintBtn = document.getElementById("tabPaintBtn");
-
-    if (tab === "jobs") {
-      jobsTab.style.display = "";
-      paintTab.style.display = "none";
-      jobsBtn.classList.add("active");
-      paintBtn.classList.remove("active");
-    } else {
-      jobsTab.style.display = "none";
-      paintTab.style.display = "";
-      paintBtn.classList.add("active");
-      jobsBtn.classList.remove("active");
-    }
-  }
-
-  document.addEventListener("DOMContentLoaded", () => {
-    const checkIn = document.getElementById("job_check_in");
-    if (checkIn && !checkIn.value) {
-      checkIn.valueAsDate = new Date();
-    }
-    const received = document.getElementById("received_date");
-    if (received && !received.value) {
-      received.valueAsDate = new Date();
-    }
-
-    const jobsWarn = document.getElementById("jobsEnvWarning");
-    const paintWarn = document.getElementById("paintEnvWarning");
-    if (!supabaseConfigured()) {
-      if (jobsWarn) jobsWarn.textContent = "Supabase not configured ñ set URL & KEY in index.html.";
-      if (paintWarn) paintWarn.textContent = "Supabase not configured ñ set URL & KEY in index.html.";
-    } else {
-      if (jobsWarn) jobsWarn.textContent = "";
-      if (paintWarn) paintWarn.textContent = "";
-      refreshJobs();
-      refreshPaints();
-    }
+/* ================= CONFIG ================= */
+const SUPABASE_URL = "https://xmbochwqaeakijotbcof.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtYm9jaHdxYWVha2lqb3RiY29mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjI5MTIsImV4cCI6MjA4NDU5ODkxMn0.YoxRzHEDrM9pDNEOL7mLaJewzcGB3jbZ-rc4IkR1hmQ";
+const JOBS_TABLE = "jobs";
+
+/* =============== HELPERS ================= */
+async function supabaseFetch(url, options={}) {
+  options.headers = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": "Bearer " + SUPABASE_KEY,
+    "Content-Type": "application/json"
+  };
+  const res = await fetch(url, options);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+/* =============== SAVE JOB ================= */
+async function saveJob() {
+  const job = {
+    vin: job_vin.value.trim(),
+    year: job_year.value,
+    make: job_make.value,
+    model: job_model.value,
+    customer: job_customer.value,
+    assigned: job_assigned.value,
+    work_type: job_work_type.value,
+    notes: job_notes.value,
+    updated_at: new Date().toISOString()
+  };
+
+  if (!job.vin) return alert("VIN required");
+
+  await supabaseFetch(`${SUPABASE_URL}/rest/v1/${JOBS_TABLE}`, {
+    method: "POST",
+    body: JSON.stringify(job)
   });
 
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./service-worker.js").catch(() => {});
-    });
-  }
+  jobsHint.textContent = "Job saved ‚úî";
+}
+
+/* ============ VIN DECODE (API) ============ */
+async function decodeVinAndFill(vin) {
+  jobsHint.textContent = "Decoding VIN...";
+  const res = await fetch("/.netlify/functions/decode-vin", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ vin })
+  });
+  const data = await res.json();
+
+  job_year.value = data.year || "";
+  job_make.value = data.make || "";
+  job_model.value = data.model || "";
+
+  jobsHint.textContent = "VIN decoded ‚úî";
+}
+
+function decodeVinFromInput() {
+  const vin = job_vin.value.trim();
+  if (!vin) return alert("Enter VIN first");
+  decodeVinAndFill(vin);
+}
+
+/* ============ VIN CAMERA SCAN ============= */
+let vinScannerRunning = false;
+
+function startVinScanner() {
+  vinScannerOverlay.style.display = "flex";
+  if (vinScannerRunning) return;
+  vinScannerRunning = true;
+
+  Quagga.init({
+    inputStream: {
+      type: "LiveStream",
+      target: vinScanner,
+      constraints: { facingMode: "environment" },
+      area: { top:"25%", right:"10%", left:"10%", bottom:"25%" }
+    },
+    decoder: {
+      readers: [
+        "code_39_vin_reader",
+        "code_39_reader",
+        "code_128_reader"
+      ]
+    },
+    locate:true,
+    numOfWorkers:0
+  }, err => {
+    if (err) {
+      alert("Camera error");
+      stopVinScanner();
+      return;
+    }
+    Quagga.start();
+  });
+
+  Quagga.onDetected(data => {
+    const raw = data.codeResult.code;
+    const vin = raw.replace(/[^A-Z0-9]/gi,"").toUpperCase();
+    if (vin.length === 17) {
+      stopVinScanner();
+      job_vin.value = vin;
+      decodeVinAndFill(vin);
+    }
+  });
+}
+
+function stopVinScanner() {
+  vinScannerOverlay.style.display = "none";
+  try { Quagga.stop(); } catch(e){}
+  Quagga.offDetected();
+  vinScannerRunning = false;
+}
 </script>
 </body>
 </html>
