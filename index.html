@@ -216,7 +216,8 @@
         </table>
 
         <div class="hint" style="margin-top:8px;">
-          Tap <strong>Edit</strong> to change status or any info, then Save Job.
+          Tap <strong>Edit</strong> to change status or any info.  
+          Tap <strong>Paid</strong> when you take payment – it will mark the job Delivered.
         </div>
       </div>
     </div>
@@ -400,10 +401,10 @@ function showTab(which){
 }
 
 /* =========================
-   JOBS (with EDIT)
+   JOBS (with EDIT + PAYMENT)
 ========================= */
 let JOBS = [];
-let currentEditJobId = null;  // null = new, not editing
+let currentEditJobId = null;  // null = new
 
 async function refreshJobs(){
   JOBS = await sbFetch(`${JOBS_TABLE}?select=*`);
@@ -445,6 +446,7 @@ function renderJobs(){
       <td>${j.due || "-"}</td>
       <td>
         <button class="btnS" onclick="startEditJob('${j.id}')">Edit</button>
+        <button class="btnA" onclick="payJob('${j.id}')">Paid</button>
         <button class="btnD" onclick="deleteJob('${j.id}')">Delete</button>
       </td>
     `;
@@ -453,8 +455,7 @@ function renderJobs(){
 }
 
 function setJobFormTitle(){
-  const title = document.getElementById("jobFormTitle");
-  title.textContent = currentEditJobId ? "Edit Job" : "New Job";
+  document.getElementById("jobFormTitle").textContent = currentEditJobId ? "Edit Job" : "New Job";
 }
 
 function clearJobForm(){
@@ -519,7 +520,6 @@ async function saveJob(){
 
   try{
     if(currentEditJobId){
-      // UPDATE
       await sbFetch(`${JOBS_TABLE}?id=eq.${encodeURIComponent(currentEditJobId)}`, {
         method:"PATCH",
         headers:{ "Prefer":"return=representation" },
@@ -527,7 +527,6 @@ async function saveJob(){
       });
       document.getElementById("jobsHint").textContent = "Job updated ✔";
     }else{
-      // INSERT
       await sbFetch(JOBS_TABLE, {
         method:"POST",
         headers:{ "Prefer":"return=representation" },
@@ -553,6 +552,42 @@ async function deleteJob(id){
     await refreshJobs();
   }catch(e){
     alert("Delete failed: " + e.message);
+  }
+}
+
+/* ===== PAYMENT BUTTON ===== */
+async function payJob(id){
+  const job = JOBS.find(j=>j.id===id);
+  if(!job){ alert("Job not found."); return; }
+
+  const amountStr = prompt("Payment amount received (e.g. 1850):", job.payment_amount || "");
+  if(amountStr === null) return; // cancelled
+  const amount = amountStr.trim() === "" ? null : Number(amountStr.trim());
+  if(amountStr.trim() !== "" && isNaN(amount)){
+    alert("Payment amount must be a number (e.g. 1850).");
+    return;
+  }
+
+  const method = prompt("Payment method (Cash / Zelle / Card etc.):", job.payment_method || "");
+  if(method === null) return;
+
+  const payload = {
+    status: "Delivered",
+    payment_amount: amount,
+    payment_method: method.trim() || null,
+    payment_date: todayISO()
+  };
+
+  try{
+    await sbFetch(`${JOBS_TABLE}?id=eq.${encodeURIComponent(id)}`, {
+      method:"PATCH",
+      headers:{ "Prefer":"return=representation" },
+      body: JSON.stringify(payload)
+    });
+    document.getElementById("jobsHint").textContent = "Payment saved ✔ Job marked Delivered.";
+    await refreshJobs();
+  }catch(e){
+    alert("Payment save failed: " + e.message);
   }
 }
 
@@ -630,7 +665,7 @@ function stopVinScanner(){
 }
 
 /* =========================
-   PAINT (unchanged, no edit)
+   PAINT (same as before)
 ========================= */
 let PAINTS=[];
 
@@ -731,7 +766,7 @@ async function deletePaint(id){
 }
 
 /* =========================
-   OCR Invoice (same as before)
+   OCR Invoice
 ========================= */
 function triggerInvoiceCapture(){
   const input=document.getElementById("invoiceImageInput");
